@@ -146,8 +146,50 @@ pertence( X,[Y|L] ) :-
     pertence( X,L ).
 
 
-%------------------------------------------------------------------------
-%Auxiliares: 
+%-------------------------------------------------------------------------
+% ---------------IMPLEMENTACAO DAS FUNCIONALIDADES PRETENDIDAS------------
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% Funcao que calcula a distancia euclidiana entre duas paragens dados a 
+% latitude e a longitude
+
+
+calculaDistEuc( LatA,LongA,LatB,LongB,Result ) :- 
+                            Result is sqrt( (LatB-LatA)^2 + (LongB-LongA)^2 ).
+
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+
+caminho( A,B,P ) :- caminho2( A,B,PP ), getFullInfo( PP,P ).
+
+caminho2( A,B,P ) :- caminho1( A,[B],P ).
+
+
+caminho1( A,[A|P1],[A|P1] ).
+caminho1( A,[Y|P1],P ) :-
+        adjacencia( C,X,Y,D ),
+        \+ memberchk( X,[Y|P1] ),
+        caminho1( A,[X,Y|P1],P ).
+
+
+
+
+
+
+%-------------------------------------------------------------------------
+% Alguns predicados auxiliares uteis para o desenvolvimento das funcionalidades pretendidas: 
+
+escrever([]).
+escrever([X|L]) :- write(X), nl, escrever(L).
+
+getFullInfo([],[]).
+getFullInfo([H|T], [paragem(H,A,B,C,D,E,F,G,I,J,K)|L]) :- paragem(H,A,B,C,D,E,F,G,I,J,K), 
+                                                          getFullInfo(T,L).
+
+
+
+%-------------------------------------------------------------------------
+% Algumas funcoes Auxiliares que podem ser uteis: 
 
 % Ordenada uma lista: 
 quickSort([],[]).

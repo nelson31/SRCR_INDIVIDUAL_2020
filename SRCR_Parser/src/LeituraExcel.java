@@ -32,10 +32,10 @@ public class LeituraExcel {
     private Set<Integer> carreiras;
 
     /* Localização do ficheiro Excel das paragens de Oeiras*/
-    private static final String PARAGENS_FILE = "C:\\Users\\nelso\\Desktop\\Universidade\\SRCR\\AvaliacaoIndividual\\trabalho\\paragem_autocarros_oeiras_processado_4.xlsx";
+    private static final String PARAGENS_FILE = "./paragem_autocarros_oeiras_processado_4.xlsx";
 
     /* Localização do ficheiro Excel das paragens de Oeiras*/
-    private static final String ADJACENCIAS_FILE = "C:\\Users\\nelso\\Desktop\\Universidade\\SRCR\\AvaliacaoIndividual\\trabalho\\lista_adjacencias_paragens(3).xlsx";
+    private static final String ADJACENCIAS_FILE = "./lista_adjacencias_paragens(3).xlsx";
 
     /*Numero de folhas no ficheiro de Adjacencia*/
     private static final int NUM_FOLHAS_ADJACENCIAS = 39;
