@@ -13,6 +13,7 @@
 :- set_prolog_flag( discontiguous_warnings,off ).
 :- set_prolog_flag( single_var_warnings,off ).
 :- set_prolog_flag( unknown,fail ).
+:- set_prolog_flag( double_quotes,atom ).
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % SICStus PROLOG: definicoes iniciais
@@ -160,10 +161,7 @@ calculaDistEuc( LatA,LongA,LatB,LongB,Result ) :-
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-caminho( A,B,P ) :- caminho2( A,B,PP ), getFullInfo( PP,P ).
-
-caminho2( A,B,P ) :- caminho1( A,[B],P ).
-
+caminho( A,B,P ) :- caminho1( A,[B],PP ), getFullInfo( PP,P ).
 
 caminho1( A,[A|P1],[A|P1] ).
 caminho1( A,[Y|P1],P ) :-
@@ -175,16 +173,15 @@ caminho1( A,[Y|P1],P ) :-
 
 
 
-
 %-------------------------------------------------------------------------
 % Alguns predicados auxiliares uteis para o desenvolvimento das funcionalidades pretendidas: 
 
 escrever([]).
 escrever([X|L]) :- write(X), nl, escrever(L).
 
-getFullInfo([],[]).
-getFullInfo([H|T], [paragem(H,A,B,C,D,E,F,G,I,J,K)|L]) :- paragem(H,A,B,C,D,E,F,G,I,J,K), 
-                                                          getFullInfo(T,L).
+getFullInfo( [],[] ).
+getFullInfo( [H|T],[paragem(H,A,B,C,D,E,F,G,I,J,K)|L] ) :- paragem(H,A,B,C,D,E,F,G,I,J,K), 
+                                                           getFullInfo(T,L).
 
 
 

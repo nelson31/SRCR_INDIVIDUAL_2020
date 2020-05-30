@@ -78,6 +78,45 @@ public class LeituraExcel {
         for(int i=0;i<aux.length;i++){
             if(!aux[i].equals("") && i!=aux.length-1) {
                 sb.append(aux[i]);
+                sb.append("__");
+            } else if(i==aux.length-1){
+                sb.append(aux[i]);
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Método que dado um determinado texto lhe retira as virgulas
+     * entre as palavras
+     * @param texto
+     * @return
+     */
+    public String retiraVirgulas(String texto){
+
+        StringBuilder sb = new StringBuilder();
+        String[] aux = texto.split(",");
+        /*Enquanto existirem virgulas em Branco para substituir*/
+        for(int i=0;i<aux.length;i++){
+            sb.append(aux[i]);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Método que dado um determinado texto lhe retira os hifens
+     * entre as palavras
+     * @param texto
+     * @return
+     */
+    public String retiraHifens(String texto){
+
+        StringBuilder sb = new StringBuilder();
+        String[] aux = texto.split("-");
+        /*Enquanto existirem virgulas em Branco para substituir*/
+        for(int i=0;i<aux.length;i++){
+            if(!aux[i].equals("") && i!=aux.length-1) {
+                sb.append(aux[i]);
                 sb.append("_");
             } else if(i==aux.length-1){
                 sb.append(aux[i]);
@@ -99,6 +138,8 @@ public class LeituraExcel {
             byte array[] = input.getBytes("ISO-8859-1");
             output = new String(array, "UTF-8");
             output = this.retiraEspacos(output);
+            output = this.retiraVirgulas(output);
+            output = this.retiraHifens(output);
             output = output.toLowerCase();
             //System.out.println(output);
         } catch (IOException e) {

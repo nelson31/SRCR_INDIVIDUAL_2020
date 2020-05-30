@@ -101,11 +101,11 @@ public class EscritaProlog {
                 sb.append(p.getCarreira()); sb.append(",");
                 sb.append(p.getCodigo_rua()); sb.append(",");
                 if(!p.getNome_rua().contains("xptoSRCR")){
-                    sb.append("\""); sb.append(p.getNome_rua()); sb.append("\"");
+                    sb.append("'"); sb.append(p.getNome_rua()); sb.append("'");
                 } else sb.append(p.getNome_rua());
                 sb.append(",");
                 if(!p.getFreguesia().contains("xptoSRCR")) {
-                    sb.append("\""); sb.append(p.getFreguesia()); sb.append("\"");
+                    sb.append("'"); sb.append(p.getFreguesia()); sb.append("'");
                 } else sb.append(p.getFreguesia());
                 sb.append(" ).");
                 // Escrita da linha no ficheiro
