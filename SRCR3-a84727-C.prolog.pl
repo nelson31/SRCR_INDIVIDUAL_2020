@@ -50,19 +50,17 @@
 calculaDistEuc( LatA,LongA,LatB,LongB,Result ) :- 
                         Result is sqrt( (LatB-LatA)^2 + (LongB-LongA)^2 ).
 
-%%%%%%%%%%%%%PESQUISA NAO INFORMADA%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%--------PESQUISA NAO INFORMADA--------%%%%%%%%%%%%%%%%%%%%%%%
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % >Uso da estratégia “primeiro em profundidade” sem custos para descobrir o caminho entre duas paragens
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
 adjacente( Nodo,ProxNodo ) :- 
-                        demo(adjacencia( _,Nodo,ProxNodo,_ ),R), 
+                        demo(adjacencia( _,Nodo,ProxNodo,_ ),R),
                         (R == verdadeiro; !, fail).
 
 resolve_pp( Origem,Destino,[Origem|Caminho] ) :-
-                        profundidadeprimeiro( Origem,Destino,[],Caminho ), 
-                        getParagensbyIds( [Origem|Caminho],R ), 
-                        escrever( R ).
+                        profundidadeprimeiro( Origem,Destino,[],Caminho ).
 
 profundidadeprimeiro( Destino,Destino,_,[] ).
 profundidadeprimeiro( Origem,Destino,Historico,[ProxNodo|Caminho] ) :-
@@ -105,9 +103,7 @@ melhor_pp(Origem,Destino, S, Custo) :- findall((SS, CC), resolve_pp_c(Origem,Des
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
 resolve_pl( Origem,Destino,Caminho ) :-
-                        larguraprimeiro( Destino,[(Origem, [])|Xs]-Xs,[],Caminho ),
-                        getParagensbyIds( Caminho,R ), 
-                        escrever( R ).
+                        larguraprimeiro( Destino,[(Origem, [])|Xs]-Xs,[],Caminho ).
 
 
 larguraprimeiro( Destino,[(Destino, Cams)|_]-_, _, Result ) :- 
@@ -169,62 +165,29 @@ atualizar_c( Nodo,C,[(ProxNodo,C1)|Resto],Cams,Historico,[(ProxNodo,[Nodo|Cams],
                         N is C+C1, atualizar_c( Nodo,C,Resto,Cams,Historico,Xs-Ys ).
 
 
-%%%%%%%%%%%%%PESQUISA INFORMADA%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%--------PESQUISA INFORMADA--------%%%%%%%%%%%%%%%%%%%%%%%
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % >Predicados usados para estimativas
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-% Estmativa baseada na distancia Euclidiana entre uma origem e um destino
+% Estimativa baseada na distancia Euclidiana entre uma origem e um destino
 estimabyDist( Origem,Destino,Estima ) :- 
                         getLatitudebyId( Origem,LatO ), getLongitudebyId( Origem,LongO ),
                         getLatitudebyId( Destino,LatD ),getLongitudebyId( Destino,LongD ),
                         calculaDistEuc( LatO,LongO,LatD,LongD,Estima ).
 
+% Estimativa baseada no menor numero de paragens
+estimabyParag( Origem,Destino,Estima ) :-
+                        resolve_pl( Origem,Destino,Caminho ),
+                        length( Caminho,Estima ).
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
-% >Uso da estratégia “Pesquisa Gulosa (Greedy)” com custos
+% >Uso da estratégia “Pesquisa Gulosa (Greedy)” com custos ( Para estimativa e criterio é usada a distancia euclidiana)
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-resolve_gulosa(Nodo, Caminho/Custo) :-
-    estima(Nodo, Estima),
-    gulosa([[Nodo]/0/Estima], InvCaminho/Custo/_),
-    inverso(InvCaminho, Caminho).
-
-gulosa(Caminhos, Caminho) :-
-    obtem_melhor_G(Caminhos, Caminho),
-    Caminho = [Nodo|_]/_/_,
-    goal(Nodo).
-
-gulosa(Caminhos, SolucaoCaminho) :-
-    obtem_melhor_G(Caminhos, MelhorCaminho),
-    seleciona(MelhorCaminho, Caminhos, OutrosCaminhos),
-    expande_gulosa(MelhorCaminho, ExpCaminhos),
-    append(OutrosCaminhos, ExpCaminhos, NovoCaminhos),
-    gulosa(NovoCaminhos, SolucaoCaminho).       
-
-
-obtem_melhor_G([Caminho], Caminho) :- !.
-
-obtem_melhor_G([Caminho1/Custo1/Est1,_/Custo2/Est2|Caminhos], MelhorCaminho) :-
-        Est1 =< Est2, !,
-        obtem_melhor_G([Caminho1/Custo1/Est1|Caminhos], MelhorCaminho).
-    
-obtem_melhor_G([_|Caminhos], MelhorCaminho) :- 
-    obtem_melhor_G(Caminhos, MelhorCaminho).
-
-expande_gulosa(Caminho, ExpCaminhos) :-
-    findall(NovoCaminho, adjacente(Caminho,NovoCaminho), ExpCaminhos).
-
-
-
-%--------------------------------- - - - - - - - - - -  -  -  -  -   -
-% >Uso da estratégia “Pesquisa A*” com custos
-%--------------------------------- - - - - - - - - - -  -  -  -  -   -
-
-resolve_aestrela( Origem,Destino,Caminho,Custo ) :-
+resolve_gulosabyDist( Origem,Destino,Caminho,Custo ) :- 
                         estimabyDist( Origem,Destino,Estima ),
-                        aestrela( Destino,[[Origem]/0/Estima],Caminho1/Custo1/_ ),
+                        gulosabyDist( Destino,[[Origem]/0/Estima],Caminho1/Custo1/_ ),
                         inverso( Caminho1,Caminho ),
                         converteKms( Custo1,Custo ),
                         getParagensbyIds( Caminho,R ), 
@@ -232,43 +195,250 @@ resolve_aestrela( Origem,Destino,Caminho,Custo ) :-
                         write("Total Custo do Caminho em Kms = "), 
                         write(Custo), nl.
 
-aestrela( Destino,Caminhos,Caminho ) :-
-                        obtem_melhor_caminho( Caminhos,Caminho ),
-                        Caminho = [Destino|_]/_/_.
 
-aestrela( Destino,Caminhos,SolucaoCaminho ) :-
-                        obtem_melhor_caminho( Caminhos,MelhorCaminho ),
+gulosabyDist( Destino,Caminhos,MelhorCaminho ) :-
+                        obtem_melhor_caminho_Gulosa( Caminhos,MelhorCaminho ),
+                        MelhorCaminho = [Destino|_]/_/_.
+
+gulosabyDist( Destino,Caminhos,Caminho ) :-
+                        obtem_melhor_caminho_Gulosa( Caminhos,MelhorCaminho ),
                         seleciona( MelhorCaminho,Caminhos,OutrosCaminhos ),
-                        expande_aestrela( Destino,MelhorCaminho,ExpCaminhos ),
+                        expande_CaminhosbyDist( Destino,MelhorCaminho,ExpCaminhos ),
                         append( OutrosCaminhos,ExpCaminhos,NovoCaminhos ),
-                        aestrela( Destino,NovoCaminhos,SolucaoCaminho ).     
+                        gulosabyDist( Destino,NovoCaminhos,Caminho ).
+
+% Dado um conjunto de Caminhos da-nos aquele que tem uma estimativa menor até chegar ao destino
+obtem_melhor_caminho_Gulosa( [Caminho],Caminho ) :- !.
+
+obtem_melhor_caminho_Gulosa( [Caminho1/Custo1/Est1,_/Custo2/Est2|Caminhos],MelhorCaminho ) :-
+                        Est1 =< Est2, !,
+                        obtem_melhor_caminho_Gulosa( [Caminho1/Custo1/Est1|Caminhos],MelhorCaminho ).
+    
+obtem_melhor_caminho_Gulosa( [_|Caminhos],MelhorCaminho ) :- 
+                        obtem_melhor_caminho_Gulosa( Caminhos,MelhorCaminho ).
+
+% Dado um destino e um Caminho nos dá todos os caminhos adjacentes a um determinado nodo, juntamente 
+% com o custo desses  caminhos e a estimativa ate ao Destino
+expande_CaminhosbyDist( Destino,Caminho,ExpCaminhos ) :-
+                        findall( NovoCaminho,adjacente_InfobyDist( Destino,Caminho,NovoCaminho ),ExpCaminhos ).
 
 
-obtem_melhor_caminho( [Caminho],Caminho ) :- !.
-
-obtem_melhor_caminho( [Caminho1/Custo1/Est1,_/Custo2/Est2|Caminhos],MelhorCaminho ) :-
-                        Custo1 + Est1 =< Custo2 + Est2, !,
-                        obtem_melhor_caminho( [Caminho1/Custo1/Est1|Caminhos],MelhorCaminho ).
-
-obtem_melhor_caminho( [_|Caminhos],MelhorCaminho ) :- 
-                        obtem_melhor_caminho( Caminhos,MelhorCaminho ).
-
-
-expande_aestrela( Destino,Caminho,ExpCaminhos ) :-
-                        findall( NovoCaminho,adjacente_aestrela( Destino,Caminho,NovoCaminho ),ExpCaminhos ).
-
-
-adjacente_aestrela( Destino,[Nodo|Caminho]/Custo/_,[ProxNodo,Nodo|Caminho]/NovoCusto/Est ) :-
+adjacente_InfobyDist( Destino,[Nodo|Caminho]/Custo/_,[ProxNodo,Nodo|Caminho]/NovoCusto/Estimativa ) :-
                         adjacente_c( Nodo,ProxNodo,Custo1 ),
                         nao( pertence( ProxNodo,Caminho ) ),
                         NovoCusto is Custo + Custo1,
-                        estimabyDist( ProxNodo,Destino,Est ).
+                        estimabyDist( ProxNodo,Destino,Estimativa ).
+
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >Uso da estratégia “Pesquisa A*” com custos ( Para estimativa e criterio é usada a distancia euclidiana)
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+
+resolve_aestrelabyDist( Origem,Destino,Caminho,Custo ) :-
+                        estimabyDist( Origem,Destino,Estima ),
+                        aestrelabyDist( Destino,[[Origem]/0/Estima],Caminho1/Custo1/_ ),
+                        inverso( Caminho1,Caminho ),
+                        converteKms( Custo1,Custo ),
+                        getParagensbyIds( Caminho,R ), 
+                        escrever( R ), nl,
+                        write("Total Custo do Caminho em Kms = "), 
+                        write(Custo), nl.
+
+aestrelabyDist( Destino,Caminhos,Caminho ) :-
+                        obtem_melhor_caminho_Estrela( Caminhos,Caminho ),
+                        Caminho = [Destino|_]/_/_.
+
+aestrelabyDist( Destino,Caminhos,SolucaoCaminho ) :-
+                        obtem_melhor_caminho_Estrela( Caminhos,MelhorCaminho ),
+                        seleciona( MelhorCaminho,Caminhos,OutrosCaminhos ),
+                        expande_CaminhosbyDist( Destino,MelhorCaminho,ExpCaminhos ),
+                        append( OutrosCaminhos,ExpCaminhos,NovoCaminhos ),
+                        aestrelabyDist( Destino,NovoCaminhos,SolucaoCaminho ).     
+
+% Dado um conjunto de Caminhos da-nos aquele que tem uma estimativa + Custo ate ao momento
+% menor até chegar ao destino
+obtem_melhor_caminho_Estrela( [Caminho],Caminho ) :- !.
+
+obtem_melhor_caminho_Estrela( [Caminho1/Custo1/Est1,_/Custo2/Est2|Caminhos],MelhorCaminho ) :-
+                        Custo1 + Est1 =< Custo2 + Est2, !,
+                        obtem_melhor_caminho_Estrela( [Caminho1/Custo1/Est1|Caminhos],MelhorCaminho ).
+
+obtem_melhor_caminho_Estrela( [_|Caminhos],MelhorCaminho ) :- 
+                        obtem_melhor_caminho_Estrela( Caminhos,MelhorCaminho ).
+
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >Uso da estratégia “Pesquisa Gulosa (Greedy)” com custos ( Para estimativa e criterio é usado 
+% o menor numero de paragens)
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+
+resolve_gulosabyParag( Origem,Destino,Caminho,Custo ) :- 
+                        estimabyParag( Origem,Destino,Estima ),
+                        gulosabyParag( Destino,[[Origem]/1/Estima],Caminho1/Custo/_ ),
+                        inverso( Caminho1,Caminho ),
+                        getParagensbyIds( Caminho,R ), 
+                        escrever( R ), nl,
+                        write("Total Custo do Caminho em numero de Paragens = "), 
+                        write(Custo), nl.
+
+
+gulosabyParag( Destino,Caminhos,MelhorCaminho ) :-
+                        obtem_melhor_caminho_Gulosa( Caminhos,MelhorCaminho ),
+                        MelhorCaminho = [Destino|_]/_/_.
+
+gulosabyParag( Destino,Caminhos,Caminho ) :-
+                        obtem_melhor_caminho_Gulosa( Caminhos,MelhorCaminho ),
+                        seleciona( MelhorCaminho,Caminhos,OutrosCaminhos ),
+                        expande_CaminhosbyParag( Destino,MelhorCaminho,ExpCaminhos ),
+                        append( OutrosCaminhos,ExpCaminhos,NovoCaminhos ),
+                        gulosabyParag( Destino,NovoCaminhos,Caminho ).
+
+
+% Dado um destino e um Caminho nos dá todos os caminhos adjacentes a um determinado nodo, juntamente 
+% com o custo desses caminhos em numero de Paragens e a estimativa ate ao Destino
+expande_CaminhosbyParag( Destino,Caminho,ExpCaminhos ) :-
+                        findall( NovoCaminho,adjacente_InfobyParag( Destino,Caminho,NovoCaminho ),ExpCaminhos ).
+
+
+adjacente_InfobyParag( Destino,[Nodo|Caminho]/Custo/_,[ProxNodo,Nodo|Caminho]/NovoCusto/Estimativa ) :-
+                        adjacente( Nodo,ProxNodo ),
+                        nao( pertence( ProxNodo,Caminho ) ),
+                        NovoCusto is Custo + 1,
+                        estimabyParag( ProxNodo,Destino,Estimativa ).
+
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >Uso da estratégia “Pesquisa A*” com custos ( Para estimativa e criterio é usado o menor numero de paragens)
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+
+resolve_aestrelabyParag( Origem,Destino,Caminho,Custo ) :-
+                        estimabyParag( Origem,Destino,Estima ),
+                        aestrelabyParag( Destino,[[Origem]/1/Estima],Caminho1/Custo/_ ),
+                        inverso( Caminho1,Caminho ),
+                        getParagensbyIds( Caminho,R ), 
+                        escrever( R ), nl,
+                        write("Total Custo do Caminho em numero de Paragens = "), 
+                        write(Custo), nl.
+
+aestrelabyParag( Destino,Caminhos,Caminho ) :-
+                        obtem_melhor_caminho_Estrela( Caminhos,Caminho ),
+                        Caminho = [Destino|_]/_/_.
+
+aestrelabyParag( Destino,Caminhos,SolucaoCaminho ) :-
+                        obtem_melhor_caminho_Estrela( Caminhos,MelhorCaminho ),
+                        seleciona( MelhorCaminho,Caminhos,OutrosCaminhos ),
+                        expande_CaminhosbyParag( Destino,MelhorCaminho,ExpCaminhos ),
+                        append( OutrosCaminhos,ExpCaminhos,NovoCaminhos ),
+                        aestrelabyParag( Destino,NovoCaminhos,SolucaoCaminho ).     
+
+
+%-------------------------------------------------------------------------------------
+% ---------------PREDICADOS USADOS PARA DAR RESPOSTA AS QUERYS PRETENDIDAS------------
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >Selecionar apenas algumas das operadoras de transporte para um determinado percurso
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+
+
+seleciona_Operadoras( Origem,Destino,Operadoras,CaminhoFinal ) :- 
+                        findall( Caminho,resolve_pl( Origem,Destino,Caminho ),Caminhos ),
+                        verificaOperadoras_Cams( Caminhos,Operadoras,CaminhoFinal ).
+
+
+verificaOperadoras_Cams( [],_,_ ) :- !,fail.
+verificaOperadoras_Cams( [C|Cams],Operadoras,Caminho ) :-
+                        verificaOperadoras_Cam( C,Operadoras,Caminho );
+                        verificaOperadoras_Cams(Cams,Operadoras,Caminho).
+
+verificaOperadoras_Cam( [],Operadoras,[] ).
+verificaOperadoras_Cam( [P|Ps],Operadoras,[P|Caminho] ) :-
+                        paragem( P,_,_,_,_,_,Oper,_,_,_,_ ),
+                        ( (pertence( Oper,Operadoras ), verificaOperadoras_Cam( Ps,Operadoras,Caminho ));
+                        !, fail).
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >Excluir uma ou mais operadoras de transporte para o percurso
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+
+excluir_Operadoras( Origem,Destino,Operadoras,Caminho ) :-
+                        nao( verificaOperadoras_Cam( [Origem,Destino],Operadoras,P ) ), % Verificar se as operadoras da origem e destino nao fazem parte das que se pretendem excluir
+                        larguraprimeiro_noOperadoras( Destino,Operadoras,[(Origem, [])|Xs]-Xs,[],Caminho ).
+
+larguraprimeiro_noOperadoras( Destino,_,[(Destino, Cams)|_]-_, _, Result ) :- 
+                        !, inverso( [Destino|Cams],Result ).
+
+larguraprimeiro_noOperadoras( Destino,Operadoras,[(Nodo, _)|Xs]-Ys,Historico,Result ) :- 
+                        pertence( Nodo,Historico ),!, 
+                        larguraprimeiro_noOperadoras( Destino,Operadoras,Xs-Ys,Historico,Result ). 
+
+larguraprimeiro_noOperadoras( Destino,Operadoras,[(Nodo, Cams)|Xs]-Ys,Historico,Result ) :-
+                        adjacente(Nodo,ProxNodo),
+                        findall( ProxNodo,( adjacente(Nodo,ProxNodo),nao( verificaOperadoras_Cam( [Nodo,ProxNodo],Operadoras,P ) ) ),Lista ), % Verificar se os nodos adjacentes nao tem operadoras que se pretendem excluir
+                        atualizar( Nodo,Lista,Cams,[Nodo|Historico],Ys-Zs ),
+                        larguraprimeiro_noOperadoras( Destino,Operadoras,Xs-Zs,[Nodo|Historico],Result ).
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >Identificar quais as paragens com o maior numero de carreiras num determinado percurso
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+
+%%  VER MELHOR
+paragens_maisCarreiras( Percurso,Resultado ) :-
+                        getParagensbyIds( Percurso,Paragens ),
+                        getParagensMaisCarreiras( Paragens,0,Resultado ).
+
+getParagensMaisCarreiras( [],_,[] ).
+
+getParagensMaisCarreiras( [P|Ps],N,[P|Resultado] ) :-
+                        getCarreiras( P,Carrs ),
+                        length( Carrs,Ncarrs ),
+                        Ncarrs > N,
+                        getParagensMaisCarreiras( Ps,Ncarrs,Resultado ).
+
+getParagensMaisCarreiras( [P|Ps],N,Resultado ) :-
+                        getCarreiras( P,Carrs ),
+                        length( Carrs,Ncarrs ),
+                        Ncarrs < N,
+                        getParagensMaisCarreiras( Ps,N,Resultado ).
+
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >Escolher o menor percurso(usando o critério menor numero de paragens)
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+
+menorPercurso( Origem,Destino,Caminho,Custo ) :-
+                        resolve_aestrelabyParag( Origem,Destino,Caminho,Custo ).
+
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >Escolher o percurso mais rapido(usando o critério de distancia)
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+
+maisRapido( Origem,Destino,Caminho,Custo ) :-
+                        resolve_aestrelabyDist( Origem,Destino,Caminho,Custo ).
+
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >Escolher o percurso que passe apenas por abrigos com publicidade
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
 
 
 
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >Escolher o percurso que passe apenas por paragens abrigadas
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-%-------------------------------------------------------------------------
+
+
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >Escolher um ou mais pontos intermedios por onde o percurso devera passar
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+
+
+
+
+%---------------------------------------------------------------------------------------------
 % ----------------PREDICADOS AUXILIARES UTEIS PARA AS FUNCIONALIDADES PRETENDIDAS-------------
 
 escrever([]).
@@ -278,9 +448,30 @@ getParagensbyIds( [],[] ).
 getParagensbyIds( [H|T],[paragem(H,A,B,C,D,E,F,G,I,J,K)|L] ) :- paragem(H,A,B,C,D,E,F,G,I,J,K), 
                                                                 getParagensbyIds(T,L).
 
+
 getLatitudebyId( Id,A ) :- demo( paragem(Id,A,B,C,D,E,F,G,I,J,K),R ), (R == verdadeiro; !, fail).
 
+
 getLongitudebyId( Id,B ) :- demo( paragem(Id,A,B,C,D,E,F,G,I,J,K),R ), (R == verdadeiro; !, fail).
+
+
+getCarreiras( P,Carrs ) :- demo( paragem(A,B,C,D,E,F,G,Carrs,I,J,K),R ), (R == verdadeiro; !, fail).
+
+
+%------------------------------------------------------------------
+% ---------------------------INVARIANTES---------------------------
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% Invariante Referencial: nao é possivel diminuir o conhecimento da base de Conhecimento das paragens
+
+-paragem( Gid,Lat,Long,Est,Tipo,Pub,Oper,Carr,Cod,Nome,Freg ) :: 
+                        ( !,fail ).
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% Invariante Referencial: nao é possivel diminuir o conhecimento da base de Conhecimento das adjacencias
+
+-adjacencia( Carreira,ParagemA,ParagemB,Dist ) ::
+                        ( !,fail ).
 
 %-------------------------------------------------------------------------
 % ----------------ALGUMAS FUNCOES QUE PODEM SER UTEIS-------------
