@@ -61,16 +61,18 @@ adjacente( Carreira,Nodo,ProxNodo ) :-
 
 resolve_pp( Origem,Destino,[Origem|Caminho],Carreiras ) :-
                         existeParagem( Origem ), existeParagem( Destino ),
-                        profundidadeprimeiro( Origem,Destino,[],Caminho,Carreiras,0 ).
+                        estimabyDist( Origem,Destino,Estima ),
+                        Estimativa is Estima+3000,
+                        profundidadeprimeiro( Origem,Destino,[],Caminho,Carreiras,0,Estimativa ).
 
 
-profundidadeprimeiro( Destino,Destino,_,[],[],_ ) :- !.
-profundidadeprimeiro( _,_,_,[],[],N ) :- N >= 50, !, fail.
-profundidadeprimeiro( Origem,Destino,Historico,[ProxNodo|Caminho],[Carreira|Carreiras],N ) :-
-                        N < 50, N1 is N+1, 
-                        adjacente( Carreira,Origem,ProxNodo ),
+profundidadeprimeiro( Destino,Destino,_,[],[],_,_ ) :- !.
+profundidadeprimeiro( Origem,Destino,Historico,[ProxNodo|Caminho],[Carreira|Carreiras],Custo1,Estimativa ) :-
+                        Custo1 < Estimativa,
+                        adjacente_c( Carreira,Origem,ProxNodo,Custo2 ),
                         nao( pertence( Origem/ProxNodo/Carreira,Historico ) ),
-                        profundidadeprimeiro( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Carreiras,N1 ).
+                        Custo is Custo1+Custo2,
+                        profundidadeprimeiro( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Carreiras,Custo,Estimativa ).
 
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
@@ -81,18 +83,23 @@ adjacente_c( Carreira,Nodo,ProxNodo,Custo ) :-
                         adjacencia( Carreira,Nodo,ProxNodo,Custo ).
 
 resolve_pp_c( Origem,Destino,[Origem|Cam],Custo,Carreiras ) :-
-                        profundidadeprimeiro_c( Origem,Destino,[],Cam,C,Carreiras ),
+                        existeParagem( Origem ), existeParagem( Destino ),
+                        estimabyDist( Origem,Destino,Estima ),
+                        Estimativa is Estima+3000,
+                        profundidadeprimeiro_c( Origem,Destino,[],Cam,C,Carreiras,Estimativa ),
                         converteKms( C,Custo ),
                         getParagensbyIds( [Origem|Cam],R ), 
                         escrever( R ), nl,
                         write("Total Custo do Caminho em Kms = "), 
                         write(Custo).
 
-profundidadeprimeiro_c( Destino,Destino,Historico,[],0,[] ) :- !.
-profundidadeprimeiro_c( Origem,Destino,Historico,[ProxNodo|Caminho],Total,[Carreira|Carreiras] ) :-
+profundidadeprimeiro_c( Destino,Destino,Historico,[],0,[],Estimativa ) :- !.
+profundidadeprimeiro_c( _,_,_,_,_,_,Estimativa ) :- Estimativa =< 0, !, fail.
+profundidadeprimeiro_c( Origem,Destino,Historico,[ProxNodo|Caminho],Total,[Carreira|Carreiras],Estimativa ) :-
                         adjacente_c( Carreira,Origem,ProxNodo,C ),
+                        Estimativa1 is Estimativa-C,
                         nao( pertence( Origem/ProxNodo/Carreira,Historico ) ),
-                        profundidadeprimeiro_c( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Custo,Carreiras ),
+                        profundidadeprimeiro_c( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Custo,Carreiras,Estimativa1 ),
                         Total is Custo+C.
 
 
@@ -486,8 +493,47 @@ percursoAbrigado( Origem,Destino,Historico,[ProxNodo|Caminho],[Carreira|Carreira
 % >Escolher um ou mais pontos intermedios por onde o percurso devera passar
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
+percurso_Intermedios( Origem,Destino,NodosIntermedios,[Origem|Caminho],Carreiras ) :-
+                        ( ( pertence( Origem,NodosIntermedios ), 
+                        removeElem( Origem,NodosIntermedios,Resultado ),
+                        percursoNodosInt( Origem,Destino,Resultado,[],Caminho,Carreiras ) );
+                        percursoNodosInt( Origem,Destino,NodosIntermedios,[],Caminho,Carreiras ) ).
 
 
+percursoNodosInt( Destino,Destino,[],_,[],[] ) :- !.
+
+percursoNodosInt( Destino,Destino,_,_,[],[] ) :- !,fail.
+
+percursoNodosInt( Origem,Destino,NodosIntermedios,Historico,[ProxNodo|Caminho],[Carreira|Carreiras] ) :-
+                        adjacente( Carreira,Origem,ProxNodo ),
+                        nao( pertence( Origem/ProxNodo/Carreira,Historico ) ),
+                        ((pertence( ProxNodo,NodosIntermedios), 
+                        removeElem( ProxNodo,NodosIntermedios,NodosIntermedios1 ),
+                        percursoNodosInt( ProxNodo,Destino,NodosIntermedios1,[Origem/ProxNodo/Carreira|Historico],Caminho,Carreiras ) );
+                        (nao( pertence( ProxNodo,NodosIntermedios) ),
+                        percursoNodosInt( ProxNodo,Destino,NodosIntermedios,[Origem/ProxNodo/Carreira|Historico],Caminho,Carreiras ) ) ).
+
+
+%% OU!!!!!
+
+percurso_Intermedios2( Origem,Destino,NodosIntermedios,Result,ResultCarreiras ) :-
+                        findall( (Caminho,Carreiras),resolve_pp(Origem,Destino,Caminho,Carreiras ),Caminhos ),
+                        verificaCaminhos( Caminhos,NodosIntermedios,Result,ResultCarreiras ).
+
+verificaCaminhos( [],NodosIntermedios,Caminho,Carreiras ) :- !,fail.
+verificaCaminhos( [(Caminho,Carreiras)|L],NodosIntermedios,Caminho,Carreiras ) :-
+                        contemNodosIntermedios( Caminho,NodosIntermedios );
+                        verificaCaminhos( L,NodosIntermedios,Caminho,Carreiras ).
+
+contemNodosIntermedios( _,[] ) :- !.
+contemNodosIntermedios( [],_ ) :- !,fail.
+contemNodosIntermedios( [P|Ps],NodosIntermedios ) :- 
+                        pertence( P,NodosIntermedios ),
+                        removeElem( P,NodosIntermedios,NodosIntermedios1 ), 
+                        contemNodosIntermedios( Ps,NodosIntermedios1 ).
+contemNodosIntermedios( [P|Ps],NodosIntermedios ) :- 
+                        nao( pertence( P,NodosIntermedios) ),
+                        contemNodosIntermedios( Ps,NodosIntermedios ).
 
 %---------------------------------------------------------------------------------------------
 % ----------------PREDICADOS AUXILIARES UTEIS PARA AS FUNCIONALIDADES PRETENDIDAS-------------
@@ -559,6 +605,13 @@ removeFirstElem( [H|Lista],Lista ).
 removeNElems( [],_,[] ).
 removeNElems( Lista,0,Lista ).
 removeNElems( [H|Lista],N,Result ) :- N1 is N-1, removeNElems( Lista,N1,Result ).
+
+%>--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% Definição de um predicado que permite remover um dado elemento de uma lista
+
+removeElem( _,[],[] ).
+removeElem( E,[H|T],Result ) :- E == H, removeElem( E,T,Result ).
+removeElem( E,[H|T],[H|Result] ) :- removeElem( E,T,Result ).
 
 %>--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % Definição de um predicado que permite calcular a soma de 
