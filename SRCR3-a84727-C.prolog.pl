@@ -43,13 +43,6 @@
 %-------------------------------------------------------------------------
 % ---------------IMPLEMENTACAO DAS FUNCIONALIDADES PRETENDIDAS------------
 
-%--------------------------------- - - - - - - - - - -  -  -  -  -   -
-% Funcao que calcula a distancia euclidiana entre duas paragens dados a 
-% latitude e a longitude
-
-
-calculaDistEuc( LatA,LongA,LatB,LongB,Result ) :- 
-                        Result is sqrt( (LatB-LatA)^2 + (LongB-LongA)^2 ).
 
 %%%%%%%%%%%%%--------PESQUISA NAO INFORMADA--------%%%%%%%%%%%%%%%%%%%%%%%
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
@@ -60,20 +53,20 @@ adjacente( Carreira,Nodo,ProxNodo ) :-
                         adjacencia( Carreira,Nodo,ProxNodo,_ ).
 
 
-resolve_pp( Origem,Destino,[Origem|Caminho],Carreiras ) :-
+percurso_pp( Origem,Destino,[Origem|Caminho],Carreiras ) :-
                         existeParagem( Origem ), existeParagem( Destino ),
-                        estimabyDist( Origem,Destino,Estima ),
-                        Estimativa is Estima+3000,
-                        profundidadeprimeiro( Origem,Destino,[],Caminho,Carreiras,0,Estimativa ).
+                        estimabyDist( Origem,Destino,Est ),
+                        Limite is Est+3000,
+                        profundidadeprimeiro( Origem,Destino,[],Caminho,Carreiras,0,Limite ).
 
 
 profundidadeprimeiro( Destino,Destino,_,[],[],_,_ ) :- !.
-profundidadeprimeiro( Origem,Destino,Historico,[ProxNodo|Caminho],[Carreira|Carreiras],Custo1,Estimativa ) :-
-                        Custo1 < Estimativa,
+profundidadeprimeiro( Origem,Destino,Historico,[ProxNodo|Caminho],[Carreira|Carreiras],Custo1,Limite ) :-
+                        Custo1 < Limite,
                         adjacente_c( Carreira,Origem,ProxNodo,Custo2 ),
                         nao( pertence( Origem/ProxNodo/Carreira,Historico ) ),
                         Custo is Custo1+Custo2,
-                        profundidadeprimeiro( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Carreiras,Custo,Estimativa ).
+                        profundidadeprimeiro( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Carreiras,Custo,Limite ).
 
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
@@ -83,29 +76,29 @@ profundidadeprimeiro( Origem,Destino,Historico,[ProxNodo|Caminho],[Carreira|Carr
 adjacente_c( Carreira,Nodo,ProxNodo,Custo ) :- 
                         adjacencia( Carreira,Nodo,ProxNodo,Custo ).
 
-resolve_pp_c( Origem,Destino,[Origem|Cam],Custo,Carreiras ) :-
+percurso_pp_c( Origem,Destino,[Origem|Cam],Custo,Carreiras ) :-
                         existeParagem( Origem ), existeParagem( Destino ),
-                        estimabyDist( Origem,Destino,Estima ),
-                        Estimativa is Estima+3000,
-                        profundidadeprimeiro_c( Origem,Destino,[],Cam,C,Carreiras,Estimativa ),
+                        estimabyDist( Origem,Destino,Est ),
+                        Limite is Est+3000,
+                        profundidadeprimeiro_c( Origem,Destino,[],Cam,C,Carreiras,Limite ),
                         converteKms( C,Custo ),
                         getParagensbyIds( [Origem|Cam],R ), 
                         escrever( R ), nl,
                         write("Total Custo do Caminho em Kms = "), 
                         write(Custo).
 
-profundidadeprimeiro_c( Destino,Destino,Historico,[],0,[],Estimativa ) :- !.
-profundidadeprimeiro_c( _,_,_,_,_,_,Estimativa ) :- Estimativa =< 0, !, fail.
-profundidadeprimeiro_c( Origem,Destino,Historico,[ProxNodo|Caminho],Total,[Carreira|Carreiras],Estimativa ) :-
+profundidadeprimeiro_c( Destino,Destino,Historico,[],0,[],Limite ) :- !.
+profundidadeprimeiro_c( _,_,_,_,_,_,Limite ) :- Limite =< 0, !, fail.
+profundidadeprimeiro_c( Origem,Destino,Historico,[ProxNodo|Caminho],Total,[Carreira|Carreiras],Limite ) :-
                         adjacente_c( Carreira,Origem,ProxNodo,C ),
-                        Estimativa1 is Estimativa-C,
+                        Limite1 is Limite-C,
                         nao( pertence( Origem/ProxNodo/Carreira,Historico ) ),
-                        profundidadeprimeiro_c( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Custo,Carreiras,Estimativa1 ),
+                        profundidadeprimeiro_c( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Custo,Carreiras,Limite1 ),
                         Total is Custo+C.
 
 
 % Ver a melhor solução
-melhor_pp( Origem,Destino,S,Custo,Carr ) :- findall( (SS,CC,Car),resolve_pp_c(Origem,Destino,SS,CC,Car),L ), 
+melhor_pp( Origem,Destino,S,Custo,Carr ) :- findall( (SS,CC,Car),percurso_pp_c(Origem,Destino,SS,CC,Car),L ), 
                                             minimo( L,(S,Custo,Carr) ).
 
 
@@ -113,7 +106,7 @@ melhor_pp( Origem,Destino,S,Custo,Carr ) :- findall( (SS,CC,Car),resolve_pp_c(Or
 % >Uso da estratégia “primeiro em largura” sem custos
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-resolve_pl( Origem,Destino,Caminho,Carreiras ) :-
+percurso_pl( Origem,Destino,Caminho,Carreiras ) :-
                         larguraprimeiro( Destino,[(Origem/0,[],[])|Xs]-Xs,[],Caminho,Carreiras ).
 
 
@@ -148,7 +141,7 @@ atualizar( [ProxNodo/Nodo/Carr|Resto],Cams,Carrs,Historico,[(ProxNodo/Carr,[Nodo
 % >Uso da estratégia “primeiro em largura” com custos 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-resolve_pl_c( Origem,Destino,Caminho,Carreiras,Custo ) :-
+percurso_pl_c( Origem,Destino,Caminho,Carreiras,Custo ) :-
                         larguraprimeiro_c( Destino,[(Origem/0/100000, [], [], 0)|Xs]-Xs,[],Caminho,Carreiras,Custo1 ),
                         converteKms( Custo1,Custo ),
                         getParagensbyIds( Caminho,R ),
@@ -195,14 +188,14 @@ estimabyDist( Origem,Destino,Estima ) :-
 
 % Estimativa baseada no menor numero de paragens
 estimabyParag( Origem,Destino,Estima ) :-
-                        resolve_pp( Origem,Destino,Caminho,Carreiras ),
+                        percurso_pp( Origem,Destino,Caminho,Carreiras ),
                         length( Caminho,Estima ).
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % >Uso da estratégia “Pesquisa Gulosa (Greedy)” com custos ( Para estimativa e criterio é usada a distancia euclidiana)
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-resolve_gulosabyDist( Origem,Destino,Caminho,Carreiras,Custo ) :- 
+percurso_gulosabyDist( Origem,Destino,Caminho,Carreiras,Custo ) :- 
                         estimabyDist( Origem,Destino,Estima ),
                         gulosabyDist( Destino,[[Origem]/[]/0/Estima],Caminho1/Carreira1/Custo1/_ ),
                         inverso( Caminho1,Caminho ),
@@ -256,7 +249,7 @@ adjacente_InfobyDist( Destino,[Nodo|Caminho]/Carrs/Custo/_,[ProxNodo,Nodo|Caminh
 % >Uso da estratégia “Pesquisa A*” com custos ( Para estimativa e criterio é usada a distancia euclidiana)
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-resolve_aestrelabyDist( Origem,Destino,Caminho,Carreiras,Custo ) :-
+percurso_aestrelabyDist( Origem,Destino,Caminho,Carreiras,Custo ) :-
                         estimabyDist( Origem,Destino,Estima ),
                         aestrelabyDist( Destino,[[Origem]/[]/0/Estima],Caminho1/Carreira1/Custo1/_ ),
                         inverso( Caminho1,Caminho ),
@@ -298,7 +291,7 @@ obtem_melhor_caminho_Estrela( [_|Caminhos],MelhorCaminho ) :-
 % o menor numero de paragens)
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-resolve_gulosabyParag( Origem,Destino,Caminho,Carreiras,Custo ) :- 
+percurso_gulosabyParag( Origem,Destino,Caminho,Carreiras,Custo ) :- 
                         estimabyParag( Origem,Destino,Estima ),
                         gulosabyParag( Destino,[[Origem]/[]/1/Estima],Caminho1/Carreira1/Custo/_ ),
                         inverso( Caminho1,Caminho ),
@@ -339,7 +332,7 @@ adjacente_InfobyParag( Destino,[Nodo|Caminho]/Carrs/Custo/_,[ProxNodo,Nodo|Camin
 % >Uso da estratégia “Pesquisa A*” com custos ( Para estimativa e criterio é usado o menor numero de paragens)
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-resolve_aestrelabyParag( Origem,Destino,Caminho,Carreiras,Custo ) :-
+percurso_aestrelabyParag( Origem,Destino,Caminho,Carreiras,Custo ) :-
                         estimabyParag( Origem,Destino,Estima ),
                         aestrelabyParag( Destino,[[Origem]/[]/1/Estima],Caminho1/Carreira1/Custo/_ ),
                         inverso( Caminho1,Caminho ),
@@ -449,7 +442,7 @@ getParagensMaisCarreiras( [P|Ps],N,Resultado ) :-
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
 menorPercurso( Origem,Destino,Caminho,Custo ) :-
-                        resolve_aestrelabyParag( Origem,Destino,Caminho,Custo ),!.
+                        percurso_aestrelabyParag( Origem,Destino,Caminho,Custo ),!.
 
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
@@ -457,7 +450,7 @@ menorPercurso( Origem,Destino,Caminho,Custo ) :-
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
 maisRapido( Origem,Destino,Caminho,Custo ) :-
-                        resolve_aestrelabyDist( Origem,Destino,Caminho,Custo ),!.
+                        percurso_aestrelabyDist( Origem,Destino,Caminho,Custo ),!.
 
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
@@ -465,7 +458,7 @@ maisRapido( Origem,Destino,Caminho,Custo ) :-
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
 paragens_comAbrigoPublicidade2( Origem,Destino,Percurso,Carreiras ) :-
-                        findall( (Caminho,Carrs),resolve_pp( Origem,Destino,Caminho,Carrs ),Caminhos ),
+                        findall( (Caminho,Carrs),percurso_pp( Origem,Destino,Caminho,Carrs ),Caminhos ),
                         verificaPubAbrigo_Cams( Caminhos,Percurso1 ),
                         retiraParams( Percurso1,Percurso,Carreiras).
 
@@ -488,7 +481,7 @@ verificaPubAbrigo_Cam( [P|Ps] ) :-
 
 verificaPubAbrigo_Cam( Caminho ) :- !, fail.
 
-%%%%%%%%%%%%% OU
+%%%%%%%%%%%%% OU (Versao sem usar findall)
 
 paragens_comAbrigoPublicidade( Origem,Destino,[Origem|Caminho],Carreiras ) :-
                         percursoPubAbrigo( Origem,Destino,[],Caminho,Carreiras ).
@@ -544,15 +537,16 @@ percursoNodosInt( Origem,Destino,NodosIntermedios,Historico,[ProxNodo|Caminho],[
 %% OU!!!!!
 
 percurso_Intermedios2( Origem,Destino,NodosIntermedios,Result,ResultCarreiras ) :-
-                        findall( (Caminho,Carreiras),resolve_pp(Origem,Destino,Caminho,Carreiras ),Caminhos ),
+                        findall( (Caminho,Carreiras),percurso_pp(Origem,Destino,Caminho,Carreiras ),Caminhos ),
                         verificaCaminhos( Caminhos,NodosIntermedios,Result,ResultCarreiras ).
 
 verificaCaminhos( [],NodosIntermedios,Caminho,Carreiras ) :- !,fail.
 verificaCaminhos( [(Caminho,Carreiras)|L],NodosIntermedios,Caminho,Carreiras ) :-
-                        contemNodosIntermedios( Caminho,NodosIntermedios );
+                        contemNodosIntermedios( Caminho,NodosIntermedios ).
+verificaCaminhos( [(Cam,Carreiras)|L],NodosIntermedios,Caminho,Carreiras ) :-
                         verificaCaminhos( L,NodosIntermedios,Caminho,Carreiras ).
 
-contemNodosIntermedios( _,[] ) :- !.
+contemNodosIntermedios( _,[] ).
 contemNodosIntermedios( [],_ ) :- !,fail.
 contemNodosIntermedios( [P|Ps],NodosIntermedios ) :- 
                         pertence( P,NodosIntermedios ),
@@ -564,6 +558,15 @@ contemNodosIntermedios( [P|Ps],NodosIntermedios ) :-
 
 %---------------------------------------------------------------------------------------------
 % ----------------PREDICADOS AUXILIARES UTEIS PARA AS FUNCIONALIDADES PRETENDIDAS-------------
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% Predicado que calcula a distancia euclidiana entre duas paragens dados a 
+% latitude e a longitude
+
+calculaDistEuc( LatA,LongA,LatB,LongB,Result ) :- 
+                        Result is sqrt( (LatB-LatA)^2 + (LongB-LongA)^2 ).
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
 escrever([]).
 escrever([X|L]) :- write(X), nl,nl, escrever(L).
@@ -599,6 +602,7 @@ getAllCarreiras( R ) :- findall( Carr,adjacencia( Carr,Nodo,ProxNodo,Dist ),R1 )
 
 getParagembyFreg( Freg,Id ) :- demo( paragem(Id,B,C,D,E,F,G,H,I,J,Freg),R ), R==verdadeiro.
 
+
 getFregbyParagem( Id,Freg ) :- demo( paragem(Id,B,C,D,E,F,G,H,I,J,Freg),R ), R==verdadeiro.
 
 %---------------------------------------------------------------------------------------------
@@ -613,6 +617,30 @@ percurso_toFreguesia( Origem,Freg,[Origem|Caminho],Carreiras ) :-
                         estimabyDist( Origem,Destino,Estima ),
                         Estimativa is Estima+3000,
                         profundidadeprimeiro( Origem,Destino,[],Caminho,Carreiras,0,Estimativa ).
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >A partir de um conjunto de carreiras em que o percurso deve utilizar, devolve-nos o caminho
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+
+percurso_Carreiras( Origem,Destino,Carreiras,Caminho ) :- 
+                        findall( (Cam,Carrs),percurso_pp(Origem,Destino,Cam,Carrs ),Caminhos ),
+                        verificaCarreiras( Caminhos,Carreiras,Caminho ).
+
+verificaCarreiras( [],Carreiras,Caminho ) :- !,fail.
+verificaCarreiras( [(Caminho,Carrs)|L],Carreiras,Caminho ) :-
+                        contemCarreiras( Carrs,Carreiras ).
+verificaCarreiras( [(Caminho,Carrs)|L],Carreiras,Caminho ) :-                        
+                        verificaCarreiras( L,Carreiras,Caminho ).
+
+contemCarreiras( _,[] ) :- !.
+contemCarreiras( [],_ ) :- !,fail.
+contemCarreiras( [P|Ps],Carreiras ) :- 
+                        pertence( P,Carreiras ),
+                        removeElem( P,Carreiras,Carreiras1 ), 
+                        contemCarreiras( Ps,Carreiras1 ).
+contemCarreiras( [P|Ps],Carreiras ) :- 
+                        nao( pertence( P,Carreiras) ),
+                        contemCarreiras( Ps,Carreiras ).
 
 
 %------------------------------------------------------------------
@@ -680,25 +708,15 @@ equals([F,S|T]) :-
     equals([S|T]).
 
 
-%--------------------------------- - - - - - - - - - -  -  -  -  -   -
-%Extensao do predicado data que permite representar uma data: Dia, Mes, Ano -> {V,F}
-
-data(Dia,Mes,Ano) :- Mes == 2, Ano mod 4 =\= 0, Dia > 0, Dia < 29, Ano >= 0.
-data(Dia,Mes,Ano) :- Mes == 2, Ano mod 4 =:= 0, Dia > 0, Dia < 30, Ano >= 0.
-data(Dia,Mes,Ano) :- pertence(Mes, [1,3,5,7,8,10,12]), Dia < 32, Dia > 0, Ano >= 0.
-data(Dia,Mes,Ano) :- pertence(Mes, [4,6,9,11]), Dia < 31, Dia > 0, Ano >= 0.
-data(Dia,Mes,Ano) :- data(Dia,Mes,Ano). 
-
-
-%---------------------------------
-%Extensao de um predicado «concatenar» que resulta na concatenação dos elementos da lista L1 com os elementos da lista L2.
+%>--------------------------------- - - - - - - - - - -  -  -  -  -   -
+%Extensao de um predicado concatenar que resulta na concatenação dos elementos da lista L1 com os elementos da lista L2.
 
 concatenar([],L,L).
 concatenar(L,[],L).
 concatenar([H1|T1],L2,[H1|R]) :- concatenar(T1,L2,R).
 
 
-%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+%>--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % Extensão do predicado que permite a evolucao do conhecimento: Termo -> {V,F}
 
 evolucao( Termo ) :-
@@ -716,7 +734,7 @@ teste( [R|LR] ) :-
     R,
     teste( LR ).
 
-%--------------------------------- - - - - - - - - - -  -  -  -  -   - 
+%>--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % Extensão do predicado que permite a involucao do conhecimento: Termo -> {V,F}
 
 involucao( Termo ) :-
@@ -730,7 +748,7 @@ remocao( Termo ) :-
     assert( Termo ),!,fail.
 
 
-%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+%>--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % Extensao do meta-predicado demo: Questao,Resposta -> {V,F}
 %                            Resposta = { verdadeiro,falso,desconhecido }
 
@@ -743,14 +761,14 @@ demo( Questao,desconhecido ) :-
     nao( -Questao ).
 
 
-%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+%>--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % Extensao do meta-predicado nao: Questao -> {V,F}
 
 nao( Questao ) :-
     Questao, !, fail.
 nao( Questao ).
 
-%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+%>--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
 solucoes( X,Y,Z ) :-
     findall( X,Y,Z ).
@@ -758,7 +776,8 @@ solucoes( X,Y,Z ) :-
 comprimento( S,N ) :-
     length( S,N ).
 
-%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+%>--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% Algums predicados para manipulaçao de listas
 
 pertence( X,[X|L] ).
 pertence( X,[Y|L] ) :-
@@ -793,38 +812,15 @@ minimo([(Px,X,C)|L],(Px,X,C)) :- minimo(L,(Py,Y,C1)), X=<Y.
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
 % Ordenada uma lista: 
-quickSort([],[]).
-quickSort([H|T], Ord) :- pivot(H,T,List1,List2), quickSort(List1,Ord1), quickSort(List2,Ord2),
-					     append(Ord1,[H|Ord2],Ord).
+myQuickSort([],[]).
+myQuickSort([H|T], Ord) :- pivot(H,T,List1,List2), myQuickSort(List1,Ord1), myQuickSort(List2,Ord2),
+					       append(Ord1,[H|Ord2],Ord).
 
-%Auxiliar da quickSort, tendo um elemento e uma lista, constroi uma lista com os elementos menores ou iguais 
+%Auxiliar da myQuickSort, tendo um elemento e uma lista, constroi uma lista com os elementos menores ou iguais 
 %que o elemento pivot e uma listas com os maiores
 pivot(P,[],[],[]).
 pivot(P,[H|T1],[H|T2],L3) :- H =< P, pivot(P,T1,T2,L3).
 pivot(P,[H|T1],L2,[H|T3]) :- H > P, pivot(P,T1,L2,T3).
-
-%Ordenada uma lista de datas: 
-quickSortData([],[]).
-quickSortData([H|T], Ord) :- pivotData(H,T,List1,List2), quickSortData(List1,Ord1), quickSortData(List2,Ord2),
-					         append(Ord1,[H|Ord2],Ord).
-
-pivotData(P,[],[],[]).
-pivotData(P,[H|T1],[H|T2],L3) :- maisRecente(P,H), pivotData(P,T1,T2,L3).  %pivot maior, pivot para o fim
-pivotData(P,[H|T1],L2,[H|T3]) :- \+(maisRecente(P,H)), pivotData(P,T1,L2,T3).
-
-
-%Determina qual a data mais recente:
-maisRecente(data(Dia1,Mes1,Ano1),data(Dia2,Mes2,Ano2)) :- Ano1 > Ano2.
-maisRecente(data(Dia1,Mes1,Ano1),data(Dia2,Mes2,Ano2)) :- Ano1 < Ano2, !, fail.
-maisRecente(data(Dia1,Mes1,Ano1),data(Dia2,Mes2,Ano2)) :- Mes1 > Mes2.
-maisRecente(data(Dia1,Mes1,Ano1),data(Dia2,Mes2,Ano2)) :- Mes1 < Mes2, !, fail.
-maisRecente(data(Dia1,Mes1,Ano1),data(Dia2,Mes2,Ano2)) :- Dia1 >= Dia2.
-maisRecente(data(Dia1,Mes1,Ano1),data(Dia2,Mes2,Ano2)) :- Dia1 < Dia2, !, fail.
-
-%Remove de uma lista de datas, qualquer data em que não se sabia o ano
-removeData([],[]).
-removeData([data(_,_,idkyear)|T],Aux) :- removeData(T,Aux).
-removeData([H|T],R) :- removeData(T,Aux), append([H],Aux,R).
 
 
 %Determina o primeiro elemento de uma lista
