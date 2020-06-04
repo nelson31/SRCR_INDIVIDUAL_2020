@@ -473,6 +473,16 @@ verificaPubAbrigo_Cam( [P|Ps] ) :-
 
 verificaPubAbrigo_Cam( Caminho ) :- !, fail.
 
+paragens_comAbrigoPublicidade2( Origem,Destino,[Origem|Caminho],Carreiras ) :-
+                        percursoPubAbrigo( Origem,Destino,[],Caminho,Carreiras ).
+
+
+percursoPubAbrigo( Destino,Destino,_,[],[] ) :- existeAbrigo( Destino ), existePublicidade(Destino), !.
+percursoPubAbrigo( Origem,Destino,Historico,[ProxNodo|Caminho],[Carreira|Carreiras] ) :-
+                        adjacente( Carreira,Origem,ProxNodo ),
+                        existeAbrigo( ProxNodo ), existePublicidade( ProxNodo ),
+                        nao( pertence( Origem/ProxNodo/Carreira,Historico ) ),
+                        percursoPubAbrigo( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Carreiras ).
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % >Escolher o percurso que passe apenas por paragens abrigadas
@@ -565,7 +575,7 @@ existeParagem( Id ) :- paragem(Id,B,C,D,E,F,G,H,I,J,K).
 existePublicidade( Id ) :- demo( paragem(Id,B,C,D,E,yes,G,H,I,J,K),R ), R==verdadeiro.
 
 
-existeAbrigo( Id ) :- demo( paragem(Id,B,C,D,fechado__dos__lados,F,G,H,I,J,K),R ), R==verdadeiro.
+existeAbrigo( Id ) :- demo( paragem(Id,B,C,D,sem__abrigo,F,G,H,I,J,K),R ), R==falso.
 
 %------------------------------------------------------------------
 % ---------------------------INVARIANTES---------------------------
