@@ -195,27 +195,30 @@ estimabyDist( Origem,Destino,Estima ) :-
 
 % Estimativa baseada no menor numero de paragens
 estimabyParag( Origem,Destino,Estima ) :-
-                        resolve_pl( Origem,Destino,Caminho ),
+                        resolve_pp( Origem,Destino,Caminho,Carreiras ),
                         length( Caminho,Estima ).
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % >Uso da estratégia “Pesquisa Gulosa (Greedy)” com custos ( Para estimativa e criterio é usada a distancia euclidiana)
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-resolve_gulosabyDist( Origem,Destino,Caminho,Custo ) :- 
+resolve_gulosabyDist( Origem,Destino,Caminho,Carreiras,Custo ) :- 
                         estimabyDist( Origem,Destino,Estima ),
-                        gulosabyDist( Destino,[[Origem]/0/Estima],Caminho1/Custo1/_ ),
+                        gulosabyDist( Destino,[[Origem]/[]/0/Estima],Caminho1/Carreira1/Custo1/_ ),
                         inverso( Caminho1,Caminho ),
+                        inverso( Carreira1,Carreiras ),
                         converteKms( Custo1,Custo ),
-                        getParagensbyIds( Caminho,R ), 
+                        getParagensbyIds( Caminho,R ),
                         escrever( R ), nl,
+                        write("Carreiras usadas no trajeto = "), nl,
+                        escrever( Carreiras ), nl,
                         write("Total Custo do Caminho em Kms = "), 
                         write(Custo), nl.
 
 
 gulosabyDist( Destino,Caminhos,MelhorCaminho ) :-
                         obtem_melhor_caminho_Gulosa( Caminhos,MelhorCaminho ),
-                        MelhorCaminho = [Destino|_]/_/_.
+                        MelhorCaminho = [Destino|_]/_/_/_.
 
 gulosabyDist( Destino,Caminhos,Caminho ) :-
                         obtem_melhor_caminho_Gulosa( Caminhos,MelhorCaminho ),
@@ -224,15 +227,17 @@ gulosabyDist( Destino,Caminhos,Caminho ) :-
                         append( OutrosCaminhos,ExpCaminhos,NovoCaminhos ),
                         gulosabyDist( Destino,NovoCaminhos,Caminho ).
 
+
 % Dado um conjunto de Caminhos da-nos aquele que tem uma estimativa menor até chegar ao destino
 obtem_melhor_caminho_Gulosa( [Caminho],Caminho ) :- !.
 
-obtem_melhor_caminho_Gulosa( [Caminho1/Custo1/Est1,_/Custo2/Est2|Caminhos],MelhorCaminho ) :-
+obtem_melhor_caminho_Gulosa( [Caminho1/Carreira1/Custo1/Est1,_/_/Custo2/Est2|Caminhos],MelhorCaminho ) :-
                         Est1 =< Est2, !,
-                        obtem_melhor_caminho_Gulosa( [Caminho1/Custo1/Est1|Caminhos],MelhorCaminho ).
-    
+                        obtem_melhor_caminho_Gulosa( [Caminho1/Carreira1/Custo1/Est1|Caminhos],MelhorCaminho ).
+
 obtem_melhor_caminho_Gulosa( [_|Caminhos],MelhorCaminho ) :- 
                         obtem_melhor_caminho_Gulosa( Caminhos,MelhorCaminho ).
+
 
 % Dado um destino e um Caminho nos dá todos os caminhos adjacentes a um determinado nodo, juntamente 
 % com o custo desses  caminhos e a estimativa ate ao Destino
@@ -240,8 +245,8 @@ expande_CaminhosbyDist( Destino,Caminho,ExpCaminhos ) :-
                         findall( NovoCaminho,adjacente_InfobyDist( Destino,Caminho,NovoCaminho ),ExpCaminhos ).
 
 
-adjacente_InfobyDist( Destino,[Nodo|Caminho]/Custo/_,[ProxNodo,Nodo|Caminho]/NovoCusto/Estimativa ) :-
-                        adjacente_c( Carreira,Nodo,ProxNodo,Custo1 ),
+adjacente_InfobyDist( Destino,[Nodo|Caminho]/Carrs/Custo/_,[ProxNodo,Nodo|Caminho]/[Car|Carrs]/NovoCusto/Estimativa ) :-
+                        adjacente_c( Car,Nodo,ProxNodo,Custo1 ),
                         nao( pertence( ProxNodo,Caminho ) ),
                         NovoCusto is Custo + Custo1,
                         estimabyDist( ProxNodo,Destino,Estimativa ).
@@ -251,19 +256,23 @@ adjacente_InfobyDist( Destino,[Nodo|Caminho]/Custo/_,[ProxNodo,Nodo|Caminho]/Nov
 % >Uso da estratégia “Pesquisa A*” com custos ( Para estimativa e criterio é usada a distancia euclidiana)
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-resolve_aestrelabyDist( Origem,Destino,Caminho,Custo ) :-
+resolve_aestrelabyDist( Origem,Destino,Caminho,Carreiras,Custo ) :-
                         estimabyDist( Origem,Destino,Estima ),
-                        aestrelabyDist( Destino,[[Origem]/0/Estima],Caminho1/Custo1/_ ),
+                        aestrelabyDist( Destino,[[Origem]/[]/0/Estima],Caminho1/Carreira1/Custo1/_ ),
                         inverso( Caminho1,Caminho ),
                         converteKms( Custo1,Custo ),
+                        inverso( Carreira1,Carreiras ),
                         getParagensbyIds( Caminho,R ), 
                         escrever( R ), nl,
+                        write("Carreiras usadas no trajeto = "), nl,
+                        escrever( Carreiras ), nl,
                         write("Total Custo do Caminho em Kms = "), 
                         write(Custo), nl.
 
+
 aestrelabyDist( Destino,Caminhos,Caminho ) :-
                         obtem_melhor_caminho_Estrela( Caminhos,Caminho ),
-                        Caminho = [Destino|_]/_/_.
+                        Caminho = [Destino|_]/_/_/_.
 
 aestrelabyDist( Destino,Caminhos,SolucaoCaminho ) :-
                         obtem_melhor_caminho_Estrela( Caminhos,MelhorCaminho ),
@@ -276,9 +285,9 @@ aestrelabyDist( Destino,Caminhos,SolucaoCaminho ) :-
 % menor até chegar ao destino
 obtem_melhor_caminho_Estrela( [Caminho],Caminho ) :- !.
 
-obtem_melhor_caminho_Estrela( [Caminho1/Custo1/Est1,_/Custo2/Est2|Caminhos],MelhorCaminho ) :-
+obtem_melhor_caminho_Estrela( [Caminho1/Carreira1/Custo1/Est1,_/_/Custo2/Est2|Caminhos],MelhorCaminho ) :-
                         Custo1 + Est1 =< Custo2 + Est2, !,
-                        obtem_melhor_caminho_Estrela( [Caminho1/Custo1/Est1|Caminhos],MelhorCaminho ).
+                        obtem_melhor_caminho_Estrela( [Caminho1/Carreira1/Custo1/Est1|Caminhos],MelhorCaminho ).
 
 obtem_melhor_caminho_Estrela( [_|Caminhos],MelhorCaminho ) :- 
                         obtem_melhor_caminho_Estrela( Caminhos,MelhorCaminho ).
@@ -289,19 +298,22 @@ obtem_melhor_caminho_Estrela( [_|Caminhos],MelhorCaminho ) :-
 % o menor numero de paragens)
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-resolve_gulosabyParag( Origem,Destino,Caminho,Custo ) :- 
+resolve_gulosabyParag( Origem,Destino,Caminho,Carreiras,Custo ) :- 
                         estimabyParag( Origem,Destino,Estima ),
-                        gulosabyParag( Destino,[[Origem]/1/Estima],Caminho1/Custo/_ ),
+                        gulosabyParag( Destino,[[Origem]/[]/1/Estima],Caminho1/Carreira1/Custo/_ ),
                         inverso( Caminho1,Caminho ),
                         getParagensbyIds( Caminho,R ), 
                         escrever( R ), nl,
+                        write("Carreiras usadas no trajeto = "), nl,
+                        inverso( Carreira1,Carreiras ),
+                        escrever( Carreiras ), nl,
                         write("Total Custo do Caminho em numero de Paragens = "), 
                         write(Custo), nl.
 
 
 gulosabyParag( Destino,Caminhos,MelhorCaminho ) :-
                         obtem_melhor_caminho_Gulosa( Caminhos,MelhorCaminho ),
-                        MelhorCaminho = [Destino|_]/_/_.
+                        MelhorCaminho = [Destino|_]/_/_/_.
 
 gulosabyParag( Destino,Caminhos,Caminho ) :-
                         obtem_melhor_caminho_Gulosa( Caminhos,MelhorCaminho ),
@@ -317,8 +329,8 @@ expande_CaminhosbyParag( Destino,Caminho,ExpCaminhos ) :-
                         findall( NovoCaminho,adjacente_InfobyParag( Destino,Caminho,NovoCaminho ),ExpCaminhos ).
 
 
-adjacente_InfobyParag( Destino,[Nodo|Caminho]/Custo/_,[ProxNodo,Nodo|Caminho]/NovoCusto/Estimativa ) :-
-                        adjacente( Carreira,Nodo,ProxNodo ),
+adjacente_InfobyParag( Destino,[Nodo|Caminho]/Carrs/Custo/_,[ProxNodo,Nodo|Caminho]/[Car|Carrs]/NovoCusto/Estimativa ) :-
+                        adjacente( Car,Nodo,ProxNodo ),
                         nao( pertence( ProxNodo,Caminho ) ),
                         NovoCusto is Custo + 1,
                         estimabyParag( ProxNodo,Destino,Estimativa ).
@@ -327,18 +339,22 @@ adjacente_InfobyParag( Destino,[Nodo|Caminho]/Custo/_,[ProxNodo,Nodo|Caminho]/No
 % >Uso da estratégia “Pesquisa A*” com custos ( Para estimativa e criterio é usado o menor numero de paragens)
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-resolve_aestrelabyParag( Origem,Destino,Caminho,Custo ) :-
+resolve_aestrelabyParag( Origem,Destino,Caminho,Carreiras,Custo ) :-
                         estimabyParag( Origem,Destino,Estima ),
-                        aestrelabyParag( Destino,[[Origem]/1/Estima],Caminho1/Custo/_ ),
+                        aestrelabyParag( Destino,[[Origem]/[]/1/Estima],Caminho1/Carreira1/Custo/_ ),
                         inverso( Caminho1,Caminho ),
                         getParagensbyIds( Caminho,R ), 
                         escrever( R ), nl,
+                        write("Carreiras usadas no trajeto = "), nl,
+                        inverso( Carreira1,Carreiras ),
+                        escrever( Carreiras ), nl,
                         write("Total Custo do Caminho em numero de Paragens = "), 
                         write(Custo), nl.
 
+
 aestrelabyParag( Destino,Caminhos,Caminho ) :-
                         obtem_melhor_caminho_Estrela( Caminhos,Caminho ),
-                        Caminho = [Destino|_]/_/_.
+                        Caminho = [Destino|_]/_/_/_.
 
 aestrelabyParag( Destino,Caminhos,SolucaoCaminho ) :-
                         obtem_melhor_caminho_Estrela( Caminhos,MelhorCaminho ),
@@ -354,7 +370,6 @@ aestrelabyParag( Destino,Caminhos,SolucaoCaminho ) :-
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % >Selecionar apenas algumas das operadoras de transporte para um determinado percurso
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
-
 
 seleciona_Operadoras( Origem,Destino,Operadoras,Caminho,Carreiras,Custo ) :-
                         verificaOperadoras_Cam( [Origem,Destino],Operadoras,P ), % Verificar se as operadoras da origem e destino fazem parte das que se pretendem excluir
