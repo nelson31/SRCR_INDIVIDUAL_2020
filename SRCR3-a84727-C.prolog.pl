@@ -1,7 +1,7 @@
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
-% SIST. REPR. CONHECIMENTO E RACIOCINIO - MiEI/3
+% SISTEMAS REPRESENTACAO CONHECIMENTO E RACIOCINIO - MiEI/3
 % Trabalho Prático Individual : Sistema de transportes do concelho de Oeiras
-% Autor: A84727
+% Autor: Nelson Faria (A84727)
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % Programação em Lógica Estendida, 
@@ -27,8 +27,8 @@
 :- include('adjacenciasBC.prolog.pl').
 
 
-%-------------------------------------------------
-% Aplicação do PMF
+%------------------------------------------------------------------------
+% Aplicação do PMF(Pressuposto do Mundo Fechado)
 
 -paragem( Gid,Lat,Long,Estado,Tipo,Pub,Oper,Carr,Cod,Nome,Freg ) :- 
    		nao(paragem( Gid,Lat,Long,Estado,Tipo,Pub,Oper,Carr,Cod,Nome,Freg )), 
@@ -55,24 +55,21 @@ adjacente( Carreira,Nodo,ProxNodo ) :-
 
 percurso_pp( Origem,Destino,[Origem|Caminho],Carreiras ) :-
                         existeParagem( Origem ), existeParagem( Destino ),
-                        profundidadeprimeiro( Origem,Destino,[],Caminho,Carreiras,10 ).
+                        profundidadeprimeiro( Origem,Destino,[],Caminho,Carreiras ).
 
 
-profundidadeprimeiro( Destino,Destino,_,[],[],_ ) :- !.
-profundidadeprimeiro( Origem,Destino,Historico,[ProxNodo|Caminho],[Carreira|Carreiras],Limite ) :-
-                        Limite > 0,
+profundidadeprimeiro( Destino,Destino,_,[],[] ) :- !.
+profundidadeprimeiro( Origem,Destino,Historico,[ProxNodo|Caminho],[Carreira|Carreiras] ) :-
                         adjacente( Carreira,Origem,ProxNodo ),
                         \+ memberchk( Origem/ProxNodo/Carreira,Historico ),
-                        Limite1 is Limite-1,
-                        % write( Limite ), nl,
-                        profundidadeprimeiro( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Carreiras,Limite1 ).
+                        profundidadeprimeiro( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Carreiras ).
 
 
-% -------------OU
+% -------------OU( Profundidade limitada )
 
 percurso_pp1( Origem,Destino,Caminho,Carreiras ) :-
                         existeParagem( Origem ), existeParagem( Destino ),
-                        profundidadeprimeiro1( Origem,Destino,[],Caminho,Carreiras,20 ).
+                        profundidadeprimeiro1( Origem,Destino,[],Caminho,Carreiras,10 ).
 
 
 profundidadeprimeiro1( Destino,Destino,Historico,Caminho,Carreiras,Limite ) :- 
@@ -100,22 +97,18 @@ adjacente_c( Carreira,Nodo,ProxNodo,Custo ) :-
 
 percurso_pp_c( Origem,Destino,[Origem|Cam],Custo,Carreiras ) :-
                         existeParagem( Origem ), existeParagem( Destino ),
-                        estimabyDist( Origem,Destino,Est ),
-                        Limite is Est+3000,
-                        profundidadeprimeiro_c( Origem,Destino,[],Cam,C,Carreiras,Limite ),
+                        profundidadeprimeiro_c( Origem,Destino,[],Cam,C,Carreiras ),
                         converteKms( C,Custo ),
                         getParagensbyIds( [Origem|Cam],R ), 
                         escrever( R ), nl,
                         write("Total Custo do Caminho em Kms = "), 
                         write(Custo).
 
-profundidadeprimeiro_c( Destino,Destino,Historico,[],0,[],Limite ) :- !.
-profundidadeprimeiro_c( _,_,_,_,_,_,Limite ) :- Limite =< 0, !, fail.
-profundidadeprimeiro_c( Origem,Destino,Historico,[ProxNodo|Caminho],Total,[Carreira|Carreiras],Limite ) :-
+profundidadeprimeiro_c( Destino,Destino,Historico,[],0,[] ) :- !.
+profundidadeprimeiro_c( Origem,Destino,Historico,[ProxNodo|Caminho],Total,[Carreira|Carreiras] ) :-
                         adjacente_c( Carreira,Origem,ProxNodo,C ),
-                        Limite1 is Limite-C,
                         nao( pertence( Origem/ProxNodo/Carreira,Historico ) ),
-                        profundidadeprimeiro_c( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Custo,Carreiras,Limite1 ),
+                        profundidadeprimeiro_c( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Custo,Carreiras ),
                         Total is Custo+C.
 
 
@@ -161,16 +154,18 @@ atualizar( [ProxNodo/Nodo/Carr|Resto],Cams,Carrs,Historico,[(ProxNodo/Carr,[Nodo
                         atualizar( Resto,Cams,Carrs,Historico,Xs-Ys ).
 
 
-% --------OU-------
+% --------OU------- (Só deixo estar para mais tarde voltar a tentar desta forma)
 
-percurso_bf( Origem,Destino,Caminho,Carreiras ) :-
-                        percurso_bfAux(Destino,[Origem/0/[]/[]],[Origem/0],[],Caminho,Carreiras ).
+percurso_pl1( Origem,Destino,Caminho,Carreiras ) :-
+                        percurso_plAux(Destino,[Origem/0/[]/[]|[]],[Origem/0|[]],[],Caminho,Carreiras ).
 
-percurso_bfAux( Destino,[Nodo/Carr/Caminho/Carreiras|_],[Nodo/Carr|_],Historico,RCaminho,RCarreiras ) :-
+percurso_plAux( Destino,[Nodo/Carr/Caminho/Carreiras|_],[Nodo/Carr|_],Historico,RCaminho,RCarreiras ) :-
 						Destino == Nodo,
                         inverso( [Destino|Caminho],RCaminho ), inverso( Carreiras,RCarreiras ).
 
-percurso_bfAux( Destino,[Nodo/Carreira/CamP/CarrP|Info],[Nodo/Carreira|Orla],Historico,Caminho,Carreiras ) :-
+percurso_plAux( Destino,[],[],Historico,RCaminho,RCarreiras ) :- !,fail.
+
+percurso_plAux( Destino,[Nodo/Carreira/CamP/CarrP|Info],[Nodo/Carreira|Orla],Historico,Caminho,Carreiras ) :-
                         solucoes( ProxNodo/Carr/[Nodo|CamP]/[Carr|CarrP],( adjacente( Carr,Nodo,ProxNodo ),
                                             nao( pertence( ProxNodo/Carr,Historico ) ),
                                             nao( pertence( ProxNodo/Carr,Orla ) ) ),
@@ -178,12 +173,12 @@ percurso_bfAux( Destino,[Nodo/Carreira/CamP/CarrP|Info],[Nodo/Carreira|Orla],His
                         concatenar( Info,NovosNodos,NovaInfo ),
                         insereOrla( NovosNodos,NovaOrla1 ),
                         concatenar( Orla,NovaOrla1,NovaOrla ),
-                        percurso_bfAux( Destino,NovaInfo,NovaOrla,[Nodo/Carreira|Historico],Caminho,Carreiras ).
+                        percurso_plAux( Destino,NovaInfo,NovaOrla,[Nodo/Carreira|Historico],Caminho,Carreiras ).
 
 
 insereOrla( [],[] ).
 insereOrla( [Nodo/Carreira/_/_|NovosNodos],[Nodo/Carreira|NovaOrla] ) :-
-                        insereOrla( NovosNodos,Orla,NovaOrla ).
+                        insereOrla( NovosNodos,NovaOrla ).
 
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
@@ -238,8 +233,8 @@ estimabyDist( Origem,Destino,Estima ) :-
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % Estimativa baseada no menor numero de paragens
 estimabyParag( Origem,Destino,Estima ) :-
-                        percurso_pp( Origem,Destino,Caminho,Carreiras ),
-                        length( Caminho,Estima ).
+                        percurso_pl( Origem,Destino,Caminho,Carreiras ),
+                        length( Carreiras,Estima ).
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % Estimativa baseada no tempo
@@ -421,9 +416,9 @@ adjacente_InfobyParag( Destino,[Nodo|Caminho]/Carrs/Custo/_,[ProxNodo,Nodo|Camin
 
 percurso_aestrelabyParag( Origem,Destino,Caminho,Carreiras,Custo ) :-
                         estimabyParag( Origem,Destino,Estima ),
-                        aestrelabyParag( Destino,[[Origem]/[]/1/Estima],Caminho1/Carreira1/Custo/_ ),
+                        aestrelabyParag( Destino,[[Origem]/[]/0/Estima],Caminho1/Carreira1/Custo/_ ),
                         inverso( Caminho1,Caminho ),
-                        getParagensbyIds( Caminho,R ), 
+                        getParagensbyIds( Caminho,R ),
                         escrever( R ), nl,
                         write("Carreiras usadas no trajeto = "), nl,
                         inverso( Carreira1,Carreiras ),
@@ -476,6 +471,13 @@ larguraprimeiro_Operadoras( Destino,Operadoras,[(Nodo/Car/C2, Cams, Carrs,C)|Xs]
                         findall( ProxNodo/Carr/C1,( adjacente_c(Carr,Nodo,ProxNodo,C1),verificaOperadoras_Cam( [Nodo,ProxNodo],Operadoras,P ) ),Lista ), % Verificar se os nodos adjacentes nao tem operadoras que se pretendem excluir
                         atualizar_c( Nodo,C,Lista,Cams,Carrs,[Nodo/Car/C2|Historico],Ys-Zs ),
                         larguraprimeiro_Operadoras( Destino,Operadoras,Xs-Zs,[Nodo/Car/C2|Historico],Result,ResultCarr,Custo ).
+
+
+verificaOperadoras_Cam( [],Operadoras,[] ).
+verificaOperadoras_Cam( [P|Ps],Operadoras,[P|Caminho] ) :-
+						paragem( P,_,_,_,_,_,Oper,_,_,_,_ ),
+                        ( (pertence( Oper,Operadoras ), verificaOperadoras_Cam( Ps,Operadoras,Caminho ));
+                        !, fail).
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % >Excluir uma ou mais operadoras de transporte para o percurso
@@ -550,31 +552,6 @@ maisRapido( Origem,Destino,Caminho,Carreiras,Custo ) :-
 % >Escolher o percurso que passe apenas por abrigos com publicidade
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-paragens_comAbrigoPublicidade2( Origem,Destino,Percurso,Carreiras ) :-
-                        findall( (Caminho,Carrs),percurso_pp( Origem,Destino,Caminho,Carrs ),Caminhos ),
-                        verificaPubAbrigo_Cams( Caminhos,Percurso1 ),
-                        retiraParams( Percurso1,Percurso,Carreiras).
-
-retiraParams( P/C,P,C ).
-
-verificaPubAbrigo_Cams( [],_ ) :- !, fail.
-
-verificaPubAbrigo_Cams( [(Caminho,Carr)|Cams],Caminho/Carr ) :-
-                        verificaPubAbrigo_Cam( Caminho ).
-
-verificaPubAbrigo_Cams( [(Caminho,Carr)|Cams],Result ) :- verificaPubAbrigo_Cams( Cams,Result ).
-
-
-verificaPubAbrigo_Cam( [] ).
-
-verificaPubAbrigo_Cam( [P|Ps] ) :-
-                        existePublicidade( P ),
-                        verificaPubAbrigo_Cam( Ps ).
-
-verificaPubAbrigo_Cam( Caminho ) :- !, fail.
-
-%%%%%%%%%%%%% OU (Versao sem usar findall)
-
 paragens_comAbrigoPublicidade( Origem,Destino,[Origem|Caminho],Carreiras ) :-
                         percursoPubAbrigo( Origem,Destino,[],Caminho,Carreiras ).
 
@@ -626,7 +603,7 @@ percursoNodosInt( Origem,Destino,NodosIntermedios,Historico,[ProxNodo|Caminho],[
                         percursoNodosInt( ProxNodo,Destino,NodosIntermedios,[Origem/ProxNodo/Carreira|Historico],Caminho,Carreiras ) ) ).
 
 
-%% OU!!!!!
+%% OU USANDO findall!!!!!
 
 percurso_Intermedios2( Origem,Destino,NodosIntermedios,Result,ResultCarreiras ) :-
                         findall( (Caminho,Carreiras),percurso_pp(Origem,Destino,Caminho,Carreiras ),Caminhos ),
@@ -739,6 +716,23 @@ contemCarreiras( [P|Ps],Carreiras ) :-
 contemCarreiras( [P|Ps],Carreiras ) :- 
                         nao( pertence( P,Carreiras) ),
                         contemCarreiras( Ps,Carreiras ).
+
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >Dada uma hora de chegada à paragem, uma origem e um destino, da-nos 
+% a hora a que se chega ao destino e o caminho, com as carreiras
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+
+percurso_Horas( Origem,Destino,HoraChegadaParagem,[Origem|Caminho],[Carreira|Carreiras],HoraChegadaDestino ) :-
+						existeParagem( Origem ), existeParagem( Destino ),
+                        profundidadeprimeiro_c( Origem,Destino,[],Caminho,C,[Carreira|Carreiras] ),
+                        converteKms( C,Custo ),
+                        estimabyTempo( [Origem/Carreira|Caminho],HoraChegadaParagem,Estima ),
+                        HoraChegadaDestino is Estima + Custo,
+                        getParagensbyIds( [Origem|Caminho],R ), 
+                        escrever( R ), nl,
+                        write("Hora de Chegada ao Destino = "), 
+                        write(HoraChegadaDestino).
 
 
 %------------------------------------------------------------------
