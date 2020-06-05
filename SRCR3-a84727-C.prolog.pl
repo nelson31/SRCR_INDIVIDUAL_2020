@@ -161,25 +161,29 @@ atualizar( [ProxNodo/Nodo/Carr|Resto],Cams,Carrs,Historico,[(ProxNodo/Carr,[Nodo
                         atualizar( Resto,Cams,Carrs,Historico,Xs-Ys ).
 
 
-% --------OU
+% --------OU-------
 
 percurso_bf( Origem,Destino,Caminho,Carreiras ) :-
-                        percurso_bfAux(Destino,[Origem/0/[]/[]],[],Caminho,Carreiras ).
+                        percurso_bfAux(Destino,[Origem/0/[]/[]],[Origem/0],[],Caminho,Carreiras ).
 
-percurso_bfAux( Destino,[Destino/Carr/Caminho/Carreiras|_],Historico,RCaminho,RCarreiras ) :-
+percurso_bfAux( Destino,[Nodo/Carr/Caminho/Carreiras|_],[Nodo/Carr|_],Historico,RCaminho,RCarreiras ) :-
+						Destino == Nodo,
                         inverso( [Destino|Caminho],RCaminho ), inverso( Carreiras,RCarreiras ).
 
-percurso_bfAux( Destino,[Nodo/Carreira/CamP/CarrP|Orla],Historico,Caminho,Carreiras ) :-
-                        findall( ProxNodo/Carr/[Nodo|CamP]/[Carr|CarrP],( adjacente( Carr,Nodo,ProxNodo ),
-                                            nao( member( ProxNodo/Carr,Historico ) ),
-                                            nao( member( ProxNodo/Carr/[Nodo|CamP]/[Carr|CarrP],Orla ) ) ),
+percurso_bfAux( Destino,[Nodo/Carreira/CamP/CarrP|Info],[Nodo/Carreira|Orla],Historico,Caminho,Carreiras ) :-
+                        solucoes( ProxNodo/Carr/[Nodo|CamP]/[Carr|CarrP],( adjacente( Carr,Nodo,ProxNodo ),
+                                            nao( pertence( ProxNodo/Carr,Historico ) ),
+                                            nao( pertence( ProxNodo/Carr,Orla ) ) ),
                                 NovosNodos),
-                        append( Orla,NovosNodos,NovaOrla ),
-                        percurso_bfAux( Destino,NovaOrla,[Nodo/Carreira|Historico],Caminho,Carreiras ).
+                        concatenar( Info,NovosNodos,NovaInfo ),
+                        insereOrla( NovosNodos,NovaOrla1 ),
+                        concatenar( Orla,NovaOrla1,NovaOrla ),
+                        percurso_bfAux( Destino,NovaInfo,NovaOrla,[Nodo/Carreira|Historico],Caminho,Carreiras ).
 
-insereInfo1( [Nodo/0],[Nodo],[] ).
-insereInfo1( [Nodo/Carreira|Historico],[Nodo|Caminho],[Carreira|Carreiras] ) :-
-                        insereInfo1( Historico,Caminho,Carreiras ).
+
+insereOrla( [],[] ).
+insereOrla( [Nodo/Carreira/_/_|NovosNodos],[Nodo/Carreira|NovaOrla] ) :-
+                        insereOrla( NovosNodos,Orla,NovaOrla ).
 
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
@@ -221,9 +225,9 @@ atualizar_c( Nodo,C,[ProxNodo/Carr/C1|Resto],Cams,Carrs,Historico,[(ProxNodo/Car
 
 
 %%%%%%%%%%%%%--------PESQUISA INFORMADA--------%%%%%%%%%%%%%%%%%%%%%%%
-%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+%>--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % >Predicados usados para estimativas
-%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+%>--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
 % Estimativa baseada na distancia Euclidiana entre uma origem e um destino
 estimabyDist( Origem,Destino,Estima ) :- 
@@ -231,10 +235,48 @@ estimabyDist( Origem,Destino,Estima ) :-
                         getLatitudebyId( Destino,LatD ),getLongitudebyId( Destino,LongD ),
                         calculaDistEuc( LatO,LongO,LatD,LongD,Estima ).
 
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % Estimativa baseada no menor numero de paragens
 estimabyParag( Origem,Destino,Estima ) :-
                         percurso_pp( Origem,Destino,Caminho,Carreiras ),
                         length( Caminho,Estima ).
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% Estimativa baseada no tempo
+estimabyTempo( [Origem/Carreira|Caminho],HoraChegadaParagem,Estima ) :-
+						verificaHoraPartida(Origem,Carreira,HoraChegadaParagem,HoraPartida),
+						length(Caminho,N),
+						write( N ),nl,
+						Estima is N*0.05 + HoraPartida + HoraChegadaParagem,
+						Estima>6,Estima<24.
+
+verificaHoraPartida( Origem,Carreira,HoraChegadaParagem,HoraPartida ) :-
+						getCarreiras( Origem,CarreirasO ),
+						incrementaTempo( CarreirasO,CarreirasO,Carreira,HoraChegadaParagem,6,HoraPartida ).
+
+
+incrementaTempo( [CarreiraOrigem|CarreirasOrigem],[],Carreira,HoraChegadaParagem,Tempo,TempoAdicional ) :-
+						HoraChegadaParagem=<Tempo,
+						CarreiraOrigem == Carreira,
+						TempoAdicional is Tempo-HoraChegadaParagem.
+
+incrementaTempo( CarreiraOrigem,[],Carreira,HoraChegadaParagem,Tempo,TempoAdicional ) :-
+						HoraChegadaParagem>Tempo,
+						TempoEntreParagens is Tempo+0.25,
+						incrementaTempo( CarreiraOrigem,CarreiraOrigem,Carreira,HoraChegadaParagem,TempoEntreParagens,TempoAdicional ).
+
+incrementaTempo( CarreiraOrigem,[Car|Carrs],Carreira,HoraChegadaParagem,Tempo,TempoAdicional ) :-
+						HoraChegadaParagem=<Tempo,
+						Carreira == Car,
+						TempoAdicional is Tempo-HoraChegadaParagem.
+
+incrementaTempo( CarreiraOrigem,[Car|Carrs],Carreira,HoraChegadaParagem,Tempo,TempoAdicional ) :-
+						HoraChegadaParagem>Tempo,
+						TempoEntreParagens is Tempo+0.25,
+						incrementaTempo( CarreiraOrigem,Carrs,Carreira,HoraChegadaParagem,TempoEntreParagens,TempoAdicional ).
+
+incrementaTempo( CarreiraOrigem,_,Carreira,HoraChegadaParagem,Tempo,TempoAdicional ) :- fail.
+
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % >Uso da estratégia “Pesquisa Gulosa (Greedy)” com custos ( Para estimativa e criterio é usada a distancia euclidiana)
@@ -434,7 +476,6 @@ larguraprimeiro_Operadoras( Destino,Operadoras,[(Nodo/Car/C2, Cams, Carrs,C)|Xs]
                         findall( ProxNodo/Carr/C1,( adjacente_c(Carr,Nodo,ProxNodo,C1),verificaOperadoras_Cam( [Nodo,ProxNodo],Operadoras,P ) ),Lista ), % Verificar se os nodos adjacentes nao tem operadoras que se pretendem excluir
                         atualizar_c( Nodo,C,Lista,Cams,Carrs,[Nodo/Car/C2|Historico],Ys-Zs ),
                         larguraprimeiro_Operadoras( Destino,Operadoras,Xs-Zs,[Nodo/Car/C2|Historico],Result,ResultCarr,Custo ).
-
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % >Excluir uma ou mais operadoras de transporte para o percurso
