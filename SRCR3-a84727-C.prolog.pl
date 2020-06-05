@@ -55,19 +55,41 @@ adjacente( Carreira,Nodo,ProxNodo ) :-
 
 percurso_pp( Origem,Destino,[Origem|Caminho],Carreiras ) :-
                         existeParagem( Origem ), existeParagem( Destino ),
-                        estimabyDist( Origem,Destino,Est ),
-                        Limite is Est+3000,
-                        profundidadeprimeiro( Origem,Destino,[],Caminho,Carreiras,0,Limite ).
+                        profundidadeprimeiro( Origem,Destino,[],Caminho,Carreiras,10 ).
 
 
-profundidadeprimeiro( Destino,Destino,_,[],[],_,_ ) :- !.
-profundidadeprimeiro( Origem,Destino,Historico,[ProxNodo|Caminho],[Carreira|Carreiras],Custo1,Limite ) :-
-                        Custo1 < Limite,
-                        adjacente_c( Carreira,Origem,ProxNodo,Custo2 ),
-                        nao( pertence( Origem/ProxNodo/Carreira,Historico ) ),
-                        Custo is Custo1+Custo2,
-                        profundidadeprimeiro( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Carreiras,Custo,Limite ).
+profundidadeprimeiro( Destino,Destino,_,[],[],_ ) :- !.
+profundidadeprimeiro( Origem,Destino,Historico,[ProxNodo|Caminho],[Carreira|Carreiras],Limite ) :-
+                        Limite > 0,
+                        adjacente( Carreira,Origem,ProxNodo ),
+                        \+ memberchk( Origem/ProxNodo/Carreira,Historico ),
+                        Limite1 is Limite-1,
+                        % write( Limite ), nl,
+                        profundidadeprimeiro( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Carreiras,Limite1 ).
 
+
+% -------------OU
+
+percurso_pp1( Origem,Destino,Caminho,Carreiras ) :-
+                        existeParagem( Origem ), existeParagem( Destino ),
+                        profundidadeprimeiro1( Origem,Destino,[],Caminho,Carreiras,20 ).
+
+
+profundidadeprimeiro1( Destino,Destino,Historico,Caminho,Carreiras,Limite ) :- 
+                        !,insereInfo( Historico,Caminho1,Carreiras1 ),
+                        inverso( [Destino|Caminho1],Caminho ), inverso( Carreiras1,Carreiras ).
+profundidadeprimeiro1( _,_,_,_,_,0 ) :- !,fail.
+profundidadeprimeiro1( Origem,Destino,Historico,Caminho,Carreiras,Limite ) :-
+                        Limite>0,
+                        adjacente( Carreira,Origem,ProxNodo ),
+                        nao( pertence( Origem/Carreira,Historico ) ),
+                        Limite1 is Limite-1,
+                        profundidadeprimeiro1( ProxNodo,Destino,[Origem/Carreira|Historico],Caminho,Carreiras,Limite1 ).
+
+
+insereInfo( [],[],[] ).
+insereInfo( [Nodo/Carreira|Historico],[Nodo|Caminho],[Carreira|Carreiras] ) :-
+                        insereInfo( Historico,Caminho,Carreiras ).
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % >Uso da estratégia “primeiro em profundidade” com custos para descobrir o caminho entre duas paragens
@@ -112,14 +134,16 @@ percurso_pl( Origem,Destino,Caminho,Carreiras ) :-
 
 larguraprimeiro( Destino,[(Nodo/Carr,Cams,Carrs)|_]-_,_,Result,ResultCarr ) :-
                         Destino == Nodo,
-                        !,inverso( [Destino|Cams],Result ), % Devolve-se o inverso pk o caminho e construido ao contrario
+                        inverso( [Destino|Cams],Result ), % Devolve-se o inverso pk o caminho e construido ao contrario
                         inverso( Carrs,ResultCarr ).
 
 larguraprimeiro( Destino,[(Nodo/Carr,_,_)|Xs]-Ys,Historico,Result,ResultCarr ) :- 
+                        nao( Destino == Nodo),
                         pertence( Nodo/Carr,Historico ),!, % Se pertencer ao historico, significa que o nodo ja foi visitado, pelo que nao necessita de ser incluido nos nodos a visitar
                         larguraprimeiro( Destino,Xs-Ys,Historico,Result,ResultCarr ). % Continuamos ate encontrar a solucao
 
 larguraprimeiro( Destino,[(Nodo/Carr,Cams,Carrs)|Xs]-Ys,Historico,Result,ResultCarr ) :-
+                        nao( Destino == Nodo),
                         findall( ProxNodo/Nodo/Carreira,adjacente(Carreira,Nodo,ProxNodo),Lista ),   % Vamos buscar todos as paragens adjacentes
                         atualizar( Lista,Cams,Carrs,[Nodo/Carr|Historico],Ys-Zs ),  % Atualizamos a Orla com os novos Nodos adjacentes a juntar
                         larguraprimeiro( Destino,Xs-Zs,[Nodo/Carr|Historico],Result,ResultCarr ). % Continuamos ate encontrar a solucao
@@ -135,6 +159,27 @@ atualizar( [ProxNodo/Nodo/Carreira|Resto],Cams,Carrs,Historico,Xs-Ys ) :-
 
 atualizar( [ProxNodo/Nodo/Carr|Resto],Cams,Carrs,Historico,[(ProxNodo/Carr,[Nodo|Cams],[Carr|Carrs])|Xs]-Ys ) :-
                         atualizar( Resto,Cams,Carrs,Historico,Xs-Ys ).
+
+
+% --------OU
+
+percurso_bf( Origem,Destino,Caminho,Carreiras ) :-
+                        percurso_bfAux(Destino,[Origem/0/[]/[]],[],Caminho,Carreiras ).
+
+percurso_bfAux( Destino,[Destino/Carr/Caminho/Carreiras|_],Historico,RCaminho,RCarreiras ) :-
+                        inverso( [Destino|Caminho],RCaminho ), inverso( Carreiras,RCarreiras ).
+
+percurso_bfAux( Destino,[Nodo/Carreira/CamP/CarrP|Orla],Historico,Caminho,Carreiras ) :-
+                        findall( ProxNodo/Carr/[Nodo|CamP]/[Carr|CarrP],( adjacente( Carr,Nodo,ProxNodo ),
+                                            nao( member( ProxNodo/Carr,Historico ) ),
+                                            nao( member( ProxNodo/Carr/[Nodo|CamP]/[Carr|CarrP],Orla ) ) ),
+                                NovosNodos),
+                        append( Orla,NovosNodos,NovaOrla ),
+                        percurso_bfAux( Destino,NovaOrla,[Nodo/Carreira|Historico],Caminho,Carreiras ).
+
+insereInfo1( [Nodo/0],[Nodo],[] ).
+insereInfo1( [Nodo/Carreira|Historico],[Nodo|Caminho],[Carreira|Carreiras] ) :-
+                        insereInfo1( Historico,Caminho,Carreiras ).
 
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
@@ -361,6 +406,13 @@ aestrelabyParag( Destino,Caminhos,SolucaoCaminho ) :-
 % ---------------PREDICADOS USADOS PARA DAR RESPOSTA AS QUERYS PRETENDIDAS------------
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
+% >Percurso entre duas paragens
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
+
+percurso2Paragens( Origem,Destino,Resultado ) :- 
+                        percurso_pp( Origem,Destino,Resultado,Carreiras ),!. 
+
+%--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % >Selecionar apenas algumas das operadoras de transporte para um determinado percurso
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
@@ -441,16 +493,16 @@ getParagensMaisCarreiras( [P|Ps],N,Resultado ) :-
 % >Escolher o menor percurso(usando o critério menor numero de paragens)
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-menorPercurso( Origem,Destino,Caminho,Custo ) :-
-                        percurso_aestrelabyParag( Origem,Destino,Caminho,Custo ),!.
+menorPercurso( Origem,Destino,Caminho,Carreiras,Custo ) :-
+                        percurso_aestrelabyParag( Origem,Destino,Caminho,Carreiras,Custo ),!.
 
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 % >Escolher o percurso mais rapido(usando o critério de distancia)
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
 
-maisRapido( Origem,Destino,Caminho,Custo ) :-
-                        percurso_aestrelabyDist( Origem,Destino,Caminho,Custo ),!.
+maisRapido( Origem,Destino,Caminho,Carreiras,Custo ) :-
+                        percurso_aestrelabyDist( Origem,Destino,Caminho,Carreiras,Custo ),!.
 
 
 %--------------------------------- - - - - - - - - - -  -  -  -  -   -
@@ -476,7 +528,6 @@ verificaPubAbrigo_Cam( [] ).
 
 verificaPubAbrigo_Cam( [P|Ps] ) :-
                         existePublicidade( P ),
-                        existeAbrigo( P ),
                         verificaPubAbrigo_Cam( Ps ).
 
 verificaPubAbrigo_Cam( Caminho ) :- !, fail.
@@ -487,10 +538,10 @@ paragens_comAbrigoPublicidade( Origem,Destino,[Origem|Caminho],Carreiras ) :-
                         percursoPubAbrigo( Origem,Destino,[],Caminho,Carreiras ).
 
 
-percursoPubAbrigo( Destino,Destino,_,[],[] ) :- existeAbrigo( Destino ), existePublicidade(Destino), !.
+percursoPubAbrigo( Destino,Destino,_,[],[] ) :- existePublicidade(Destino), !.
 percursoPubAbrigo( Origem,Destino,Historico,[ProxNodo|Caminho],[Carreira|Carreiras] ) :-
                         adjacente( Carreira,Origem,ProxNodo ),
-                        existeAbrigo( ProxNodo ), existePublicidade( ProxNodo ),
+                        existePublicidade( ProxNodo ),
                         nao( pertence( Origem/ProxNodo/Carreira,Historico ) ),
                         percursoPubAbrigo( ProxNodo,Destino,[Origem/ProxNodo/Carreira|Historico],Caminho,Carreiras ).
 
@@ -597,13 +648,19 @@ existePublicidade( Id ) :- demo( paragem(Id,B,C,D,E,yes,G,H,I,J,K),R ), R==verda
 
 existeAbrigo( Id ) :- demo( paragem(Id,B,C,D,sem__abrigo,F,G,H,I,J,K),R ), R==falso.
 
+
 getAllCarreiras( R ) :- findall( Carr,adjacencia( Carr,Nodo,ProxNodo,Dist ),R1 ),
                         removeDuplicados( R1,R ).
+
+
+getAllParagens( R ) :- findall( Id,paragem(Id,B,C,D,E,F,G,H,I,J,K),R ).
+
 
 getParagembyFreg( Freg,Id ) :- demo( paragem(Id,B,C,D,E,F,G,H,I,J,Freg),R ), R==verdadeiro.
 
 
 getFregbyParagem( Id,Freg ) :- demo( paragem(Id,B,C,D,E,F,G,H,I,J,Freg),R ), R==verdadeiro.
+
 
 %---------------------------------------------------------------------------------------------
 % ----------------------------------PREDICADOS ADICIONAIS-------------------------------------
